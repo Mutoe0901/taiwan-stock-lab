@@ -1,0 +1,8 @@
+{
+  "appId": "com.mutoe.taiwanstocklab",
+  "appName": "Taiwan Stock Lab",
+  "webDir": "web",
+  "server": {
+    "androidScheme": "https"
+  }
+}
