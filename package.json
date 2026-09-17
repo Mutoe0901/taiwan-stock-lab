@@ -1,6 +1,6 @@
 {
   "name": "taiwan-stock-lab",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "Taiwan Stock Lab - PWA + Android Capacitor wrapper",
   "scripts": {
@@ -10,7 +10,11 @@
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",
-    "@capacitor/core": "^7.0.0"
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/preferences": "^7.0.0",
+    "@capacitor/share": "^7.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.0.0"

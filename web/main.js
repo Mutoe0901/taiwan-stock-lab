@@ -2027,6 +2027,7 @@
   var App = registerPlugin("App", {
     web: () => Promise.resolve().then(() => (init_web3(), web_exports3)).then((m) => new m.AppWeb())
   });
+  var Share = registerPlugin("Share");
 
   // src/finmind.mjs
   init_core();
@@ -2222,7 +2223,7 @@
   }
 
   // src/main.js
-  var Device = registerPlugin("StocklabDevice");
+  var TOKEN_KEY = "twlab.finmind.token";
   var el = (id) => document.getElementById(id);
   var status = (text) => {
     el("mobile-status").textContent = text;
@@ -2264,12 +2265,10 @@
       warning = e.message;
     }
     let storedToken = "";
-    if (native) {
-      try {
-        storedToken = (await Device.getToken()).value || "";
-      } catch {
-        warning = "\u5DF2\u4FDD\u5B58\u7684 Token \u7121\u6CD5\u89E3\u5BC6\uFF0C\u8ACB\u5728\u8CC7\u6599\u4F86\u6E90\u91CD\u65B0\u8F38\u5165\uFF1B\u884C\u60C5\u8CC7\u6599\u4ECD\u53EF\u4F7F\u7528\u3002";
-      }
+    try {
+      storedToken = (await Preferences.get({ key: TOKEN_KEY })).value || "";
+    } catch {
+      warning = "\u5DF2\u4FDD\u5B58\u7684 Token \u7121\u6CD5\u8B80\u53D6\uFF0C\u8ACB\u5728\u8CC7\u6599\u4F86\u6E90\u91CD\u65B0\u8F38\u5165\uFF1B\u884C\u60C5\u8CC7\u6599\u4ECD\u53EF\u4F7F\u7528\u3002";
     }
     const browserRequest = async (options) => {
       const u = new URL(options.url);
@@ -2316,8 +2315,8 @@
         el("fetch-progress").hidden = false;
         el("fetch-progress").textContent = "\u958B\u59CB\u9023\u7DDA FinMind\u2026";
         try {
-          if (el("remember-token").checked && query.token) await Device.setToken({ value: query.token });
-          else await Device.deleteToken();
+          if (el("remember-token").checked && query.token) await Preferences.set({ key: TOKEN_KEY, value: query.token });
+          else await Preferences.remove({ key: TOKEN_KEY });
           storedToken = el("remember-token").checked ? query.token : "";
           return await loadMarket({ ...query, onProgress: (text) => {
             el("fetch-progress").textContent = text;
@@ -2335,9 +2334,22 @@
           setTimeout(() => URL.revokeObjectURL(link.href), 1e3);
           return;
         }
-        const data = content instanceof Blob ? await content.text() : content;
-        const result = await Device.saveText({ name, data, type });
-        if (!result.cancelled) status(`\u5DF2\u532F\u51FA ${name}`);
+        const safeName = String(name).replace(/[\\/:*?"<>|]/g, "_");
+        const path = `${Date.now()}-${safeName}`;
+        if (content instanceof Blob) {
+          const data = await new Promise((resolve2, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve2(String(reader.result || "").split(",")[1] || "");
+            reader.onerror = () => reject(reader.error || Error("Blob read failed"));
+            reader.readAsDataURL(content);
+          });
+          await Filesystem.writeFile({ path, data, directory: Directory.Cache });
+        } else {
+          await Filesystem.writeFile({ path, data: String(content), directory: Directory.Cache, encoding: Encoding.UTF8 });
+        }
+        const file = await Filesystem.getUri({ path, directory: Directory.Cache });
+        await Share.share({ title: name, url: file.uri, dialogTitle: `\u532F\u51FA ${name}` });
+        status(`\u5DF2\u6E96\u5099\u532F\u51FA ${name}`);
       },
       ready() {
         el("runtime-label").textContent = native ? "Android \xB7 Big Data" : "PWA / Web \xB7 Big Data";
@@ -2352,7 +2364,7 @@
         el("fetch-end").value = today.toLocaleDateString("sv-SE", { timeZone: "Asia/Taipei" });
         el("forget-token").onclick = async () => {
           try {
-            if (native) await Device.deleteToken();
+            await Preferences.remove({ key: TOKEN_KEY });
             storedToken = "";
             el("token").value = "";
             el("remember-token").checked = false;

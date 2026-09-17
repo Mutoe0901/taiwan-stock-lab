@@ -18,3 +18,11 @@
 - 排序依歷史上漲比例，其次中位數報酬與樣本數；排序明確標示為研究工具，不是買進建議。
 - 顯示平均報酬、中位數、盈虧比、平均最大不利變動與樣本可信度。
 - 支援掃描結果 CSV 匯出及一鍵跳轉個股大數據詳細頁。
+
+## 0.5.1
+- 修正 Android `App plugin is not implemented on android`。
+- 加入官方 Capacitor App / Filesystem / Preferences / Share plugins。
+- 移除前端對自訂 `StocklabDevice` plugin 的依賴。
+- FinMind Token 改用 Capacitor Preferences 儲存。
+- Android 匯出改用 Filesystem + 系統分享介面，支援文字與二進位 Blob。
+- Android 畫面版本更新為 0.5.1。
