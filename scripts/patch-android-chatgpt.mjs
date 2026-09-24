@@ -65,3 +65,14 @@ public class ChatGPTLauncherPlugin extends Plugin {
 fs.writeFileSync(path.join(pkgDir,'MainActivity.java'), mainActivity);
 fs.writeFileSync(path.join(pkgDir,'ChatGPTLauncherPlugin.java'), plugin);
 console.log('Patched Android project with direct ChatGPT launcher plugin.');
+
+
+// Keep Android package version aligned with the visible app version.
+const gradlePath = path.join('android','app','build.gradle');
+if (fs.existsSync(gradlePath)) {
+  let gradle = fs.readFileSync(gradlePath, 'utf8');
+  gradle = gradle.replace(/versionCode\s+\d+/, 'versionCode 604');
+  gradle = gradle.replace(/versionName\s+["'][^"']+["']/, 'versionName "0.6.4"');
+  fs.writeFileSync(gradlePath, gradle);
+  console.log('Android version set to versionCode 604 / versionName 0.6.4.');
+}

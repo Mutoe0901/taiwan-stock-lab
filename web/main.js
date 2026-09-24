@@ -1502,7 +1502,9 @@
     page = p;
     document.querySelectorAll(".page").forEach((e) => e.classList.toggle("active", e.id === p));
     document.querySelectorAll("nav button").forEach((e) => e.classList.toggle("active", e.dataset.page === p));
-    $("page-title").textContent = { overview: "\u500B\u80A1\u7E3D\u89BD", bigdata: "\u5927\u6578\u64DA\u591A\u982D\u6A5F\u7387\u5206\u6790", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[p];
+    $("page-title").textContent = { scanner: "\u6383\u63CF\u9078\u80A1", overview: "\u500B\u80A1\u7E3D\u89BD", bigdata: "\u5927\u6578\u64DA\u591A\u982D\u6A5F\u7387\u5206\u6790", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[p];
+    const quickChatGPT = $("quick-chatgpt");
+    if (quickChatGPT) quickChatGPT.hidden = p !== "overview";
     history.replaceState(null, "", "#" + p);
   }
   function setBundle(raw) {
@@ -1631,6 +1633,76 @@
     }
     $("portfolio").innerHTML = rows.length ? table(["\u6A19\u7684", "\u80A1\u6578", "\u6BCF\u80A1\u6210\u672C", "\u5E02\u503C", "\u672A\u5BE6\u73FE\u640D\u76CA\uFF08\u672A\u6263\u8CE3\u51FA\u8CBB\u7A05\uFF09", "\u4F30\u503C\u65E5\u671F"], rows) : '<div class="empty">\u5C1A\u7121\u5DF2\u8F09\u5165\u6A19\u7684\u7684\u6301\u80A1\u8A18\u9304\u3002\u9078\u53D6\u80A1\u7968\u5F8C\u53EF\u8A2D\u5B9A\u80A1\u6578\u8207\u6210\u672C\u3002</div>';
   }
+  function buildChatGPTPrompt() {
+    const stock = selected();
+    const bars = stock.bars;
+    const latest = bars.at(-1);
+    const prev = bars.at(-2);
+    const inds = indicators(bars);
+    const indNow = inds.at(-1) || {};
+    const avg = (w, key = "close") => bars.length >= w ? bars.slice(-w).reduce((a, x) => a + (isNum(x[key]) ? x[key] : 0), 0) / w : null;
+    const ma20 = avg(20), ma60 = avg(60), ma120 = avg(120), vol20 = avg(20, "volume");
+    const change = prev ? latest.close / prev.close - 1 : null;
+    const bd = bigDataAnalysis(stock, Number($("similarity-threshold")?.value || 5));
+    const fs = [...stock.financials || []].sort((a, b) => a.date.localeCompare(b.date)).slice(-8);
+    const fLines = fs.length ? fs.map(f => {
+      const gross = f.revenue > 0 && isNum(f.gross_profit) ? f.gross_profit / f.revenue : null;
+      const op = f.revenue > 0 && isNum(f.operating_income) ? f.operating_income / f.revenue : null;
+      return `- ${f.date}：營收 ${fmt(isNum(f.revenue) ? f.revenue / 1e8 : null)} 億、毛利率 ${pct(gross)}、營益率 ${pct(op)}、EPS ${fmt(f.eps)}`;
+    }).join("\n") : "- 目前資料沒有財報欄位";
+    const conditionLines = bd.insufficient ? `- ${bd.reason}` : bd.conditions.map(x => `- ${x.on ? "符合" : "未符合"}：${x.label}`).join("\n");
+    const horizonLines = bd.insufficient ? "- 樣本不足" : bd.horizons.map(x => `- ${x.days} 日：有效樣本 ${x.count}、歷史上漲比例 ${pct(x.up_rate)}、平均報酬 ${pct(x.mean)}、中位數 ${pct(x.median)}、盈虧比 ${isNum(x.payoff) ? fmt(x.payoff, 2) + "x" : "—"}、平均最大不利變動 ${pct(x.avg_mae)}`).join("\n");
+    const inst = (key) => isNum(latest[key]) ? fmt(latest[key] / 1e3, 0) + " 張" : "缺值";
+    const prompt = `【分析模式】這是一份完整個股研究，建議使用 ChatGPT 的 High 推理強度。若目前不是 High，請仍完成分析，但優先重視資料查證、交叉驗證與不確定性。\n\n請以台股研究分析師的角度，分析以下股票。請使用繁體中文，並將「已知事實」、「資料推論」、「市場預期」清楚分開。不要把任何單一指標視為保證，也不要只給買進／賣出結論。若需要最新新聞、法說會、產業消息或總體資料，請先上網查證並附來源與日期。\n\n【標的】\n${stock.id} ${stock.name || ""}\n產業：${stock.sector || "未分類"}\n本機資料來源：${bundle.source || "使用者匯入"}\n資料抓取時間：${bundle.fetched_at || "未提供"}\n行情截止日：${latest.date}\n\n【目前行情】\n- 收盤價：${fmt(latest.close)} 元\n- 單日漲跌：${pct(change)}\n- 成交量：${fmt(latest.volume / 1e3, 0)} 張\n- 20 日均量：${isNum(vol20) ? fmt(vol20 / 1e3, 0) + " 張" : "—"}\n- 本益比：${isNum(latest.pe) && latest.pe > 0 ? fmt(latest.pe) + " 倍" : "缺值或非正"}\n\n【技術面】\n- MA20：${fmt(ma20)}\n- MA60：${fmt(ma60)}\n- MA120：${fmt(ma120)}\n- MACD DIF：${fmt(indNow.dif, 3)}\n- MACD DEA：${fmt(indNow.dea, 3)}\n- MACD 柱狀值：${fmt(indNow.macd, 3)}\n- KD K：${fmt(indNow.k, 2)}\n- KD D：${fmt(indNow.d, 2)}\n\n【法人當日買賣超】\n- 外資：${inst("foreign")}\n- 投信：${inst("trust")}\n- 自營商：${inst("dealer")}\n\n【目前 7 項多頭條件】\n${conditionLines}\n\n【歷史相似條件統計】\n${horizonLines}\n\n【近八期財務摘要】\n${fLines}\n\n請依序完成以下分析：\n1. 基本面：營收、獲利率、EPS、估值與產業位置；指出資料不足處。\n2. 技術面：日線／中期趨勢、均線、MACD、KD、量價，提出主要支撐與壓力區。\n3. 籌碼面：解讀外資、投信、自營商目前訊號，但不要把單日法人數據過度解讀。\n4. 大數據：解讀歷史相似條件的樣本數、上漲比例、平均／中位數、盈虧比與最大不利變動，特別提醒樣本偏誤與非預測性。\n5. 市場正在定價什麼：哪些利多／利空可能已反映，哪些可能形成預期差。\n6. 最新新聞與催化因素：搜尋近期重要新聞、法說、月營收、產業報價、政策、匯率等，標示來源與日期。\n7. 建立多頭、中性震盪、空頭三種情境，各自列出成立條件、失效條件與需要觀察的價位／事件。\n8. 列出 5 個主要風險與未來 3～6 個月值得追蹤的催化事件。\n9. 最後做一個簡潔儀表板，分成基本面、技術面、籌碼面、產業面、新聞面、風險，說明目前支持多方與支持空方的證據。\n\n重要：本機提供的是歷史資料摘要，不代表即時行情。請把最新外部資料與本機截止日分開說明。`;
+    return prompt;
+  }
+  async function copyChatGPTPrompt() {
+    const text = buildChatGPTPrompt();
+    try {
+      if (mobile?.copyText) await mobile.copyText(text);
+      else if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      else {
+        const ta = document.createElement("textarea");
+        ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+      }
+      $("mobile-status").textContent = "已複製 ChatGPT 分析內容";
+    } catch (e) { showError("複製失敗：" + (e.message || e)); }
+  }
+  async function shareChatGPTPrompt() {
+    const text = buildChatGPTPrompt();
+    const stock = selected();
+    try {
+      if (mobile?.shareText) await mobile.shareText(`${stock.id} ${stock.name || ""}｜台股研究室分析`, text);
+      else if (navigator.share) await navigator.share({ title: `${stock.id} ${stock.name || ""}｜台股研究室分析`, text });
+      else { await copyChatGPTPrompt(); return; }
+      $("mobile-status").textContent = "已開啟分享選單";
+    } catch (e) {
+      if (e?.name !== "AbortError") showError("分享失敗：" + (e.message || e));
+    }
+  }
+  async function openChatGPTPrompt() {
+    const text = buildChatGPTPrompt();
+    const stock = selected();
+    try {
+      if (mobile?.openChatGPT) {
+        const result = await mobile.openChatGPT(`${stock.id} ${stock.name || ""}｜台股研究室深度分析`, text);
+        if (result?.opened) {
+          $("mobile-status").textContent = "已直接開啟 ChatGPT；建議選擇 High 推理強度後送出";
+          return;
+        }
+      }
+      await shareChatGPTPrompt();
+    } catch (e) {
+      if (e?.name !== "AbortError") {
+        try { await shareChatGPTPrompt(); }
+        catch { showError("無法開啟 ChatGPT：" + (e.message || e)); }
+      }
+    }
+  }
+  function previewChatGPTPrompt() {
+    $("chatgpt-prompt").value = buildChatGPTPrompt();
+    $("chatgpt-dialog").showModal();
+  }
   function params() {
     return { streak: Number($("streak").value), hold: Number($("hold").value), foreign: $("foreign").checked, fee: Number($("fee").value) / 100, tax: Number($("tax").value) / 100, slippage: Number($("slippage").value) / 100, start: $("start").value, end: $("end").value, adjusted: $("adjusted").checked };
   }
@@ -1701,10 +1773,10 @@
   async function detectRuntime() {
     if (mobile) return;
     if (location.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(location.hostname)) {
-      $("runtime-label").textContent = "PWA / Web \xB7 Big Data";
+      $("runtime-label").textContent = "v0.6.4 · PWA / Web · Big Data";
       return;
     }
-    $("runtime-label").textContent = "\u6B63\u5728\u9023\u63A5\u672C\u6A5F\u2026";
+    $("runtime-label").textContent = "v0.6.4 · 正在連接本機…";
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 7e3);
     try {
       const r = await fetch("/api/health", { cache: "no-store", signal: controller.signal });
@@ -1714,13 +1786,13 @@
       if (v.app !== "taiwan-stock-lab") throw Error("\u9023\u5230\u5176\u4ED6\u7A0B\u5F0F\uFF0C\u8ACB\u6AA2\u67E5\u555F\u52D5\u7DB2\u5740\u3002");
       if (v.version !== "1.0.2") throw Error(`\u76EE\u524D\u4F3A\u670D\u5668\u70BA ${v.version || "\u820A\u7248"}\u3002\u8ACB\u505C\u6B62\u820A\u7A0B\u5F0F\uFF0C\u518D\u5F9E v1.0.2 \u8CC7\u6599\u593E\u555F\u52D5\u3002`);
       local = true;
-      $("runtime-label").textContent = "\u672C\u6A5F Python \xB7 v1.0.2";
+      $("runtime-label").textContent = "v0.6.4 · 本機 Python · v1.0.2";
       $("fetch-form").hidden = false;
       $("fetch-instruction").textContent = "\u5DF2\u9023\u63A5\u672C\u6A5F\u7A0B\u5F0F\u3002\u8F38\u5165\u80A1\u7968\u4EE3\u865F\u8207\u65E5\u671F\uFF0C\u6309\u300C\u6293\u53D6\u4E26\u8F09\u5165\u300D\u9023\u7DDA FinMind\uFF1B\u76EE\u524D\u70BA\u65E5\u8CC7\u6599\uFF0C\u975E\u5373\u6642\u884C\u60C5\u3002";
       document.querySelectorAll(".local-only").forEach((e) => e.hidden = false);
     } catch (e) {
       const message = e.name === "AbortError" ? "\u672C\u6A5F\u9023\u7DDA\u8D85\u904E 7 \u79D2\u3002\u8ACB\u78BA\u8A8D\u7D42\u7AEF\u6A5F\u4ECD\u5728\u57F7\u884C\u65B0\u7248 stocklab.py\u3002" : e.message;
-      $("runtime-label").textContent = "\u672C\u6A5F\u9023\u7DDA\u5931\u6557";
+      $("runtime-label").textContent = "v0.6.4 · 本機連線失敗";
       $("fetch-instruction").textContent = message;
       showError("\u672C\u6A5F\u9023\u7DDA\u5931\u6557\uFF1A" + message);
     } finally {
@@ -1903,6 +1975,14 @@
       };
       $("export-data").onclick = () => download(`stocklab_${bundle.mode === "demo" ? "DEMO" : "market"}.json`, JSON.stringify(bundle, null, 2));
       $("download-report-data").onclick = () => download(`${stockId}_report_input.json`, JSON.stringify(reportPayload(), null, 2));
+      $("quick-chatgpt").onclick = openChatGPTPrompt;
+      $("open-chatgpt").onclick = openChatGPTPrompt;
+      $("preview-chatgpt").onclick = previewChatGPTPrompt;
+      $("copy-chatgpt").onclick = copyChatGPTPrompt;
+      $("share-chatgpt").onclick = shareChatGPTPrompt;
+      $("dialog-open-chatgpt").onclick = openChatGPTPrompt;
+      $("dialog-copy-chatgpt").onclick = copyChatGPTPrompt;
+      $("dialog-share-chatgpt").onclick = shareChatGPTPrompt;
       $("print-report").onclick = () => {
         go("report");
         window.print();
@@ -2233,6 +2313,7 @@
     el("error").textContent = text;
   };
   var native = Capacitor.isNativePlatform();
+  var ChatGPTLauncher = registerPlugin("ChatGPTLauncher");
   async function bootstrap() {
     const settings = {};
     for (const key of ["twlab.watch", "twlab.positions"]) {
@@ -2325,6 +2406,34 @@
           el("fetch-progress").hidden = true;
         }
       },
+      async copyText(text) {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(String(text));
+          status("已複製 ChatGPT 分析內容");
+          return;
+        }
+        const ta = document.createElement("textarea");
+        ta.value = String(text);
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        status("已複製 ChatGPT 分析內容");
+      },
+      async openChatGPT(title, text) {
+        if (!native) return { opened: false };
+        try {
+          return await ChatGPTLauncher.open({ title: String(title || "台股研究室深度分析"), text: String(text || "") });
+        } catch {
+          return { opened: false };
+        }
+      },
+      async shareText(title, text) {
+        await Share.share({ title: String(title || "台股研究室分析"), text: String(text || ""), dialogTitle: "選擇 ChatGPT 或其他 App" });
+        status("已開啟分享選單");
+      },
       async download(name, content, type) {
         if (!native) {
           const link = document.createElement("a");
@@ -2352,7 +2461,7 @@
         status(`\u5DF2\u6E96\u5099\u532F\u51FA ${name}`);
       },
       ready() {
-        el("runtime-label").textContent = native ? "Android \xB7 Big Data" : "PWA / Web \xB7 Big Data";
+        el("runtime-label").textContent = native ? "v0.6.4 · Android · Big Data" : "v0.6.4 · PWA / Web · Big Data";
         el("fetch-form").hidden = false;
         el("fetch-instruction").textContent = native ? "Android \u76F4\u63A5\u5411 FinMind \u67E5\u8A62\uFF0C\u6293\u53D6\u5B8C\u6210\u6703\u4FDD\u5B58\u4EE5\u4F9B\u96E2\u7DDA\u5206\u6790\u3002\u4E00\u6B21\u6700\u591A 10 \u6A94\u3002" : "\u7DB2\u9801 / PWA \u6703\u76F4\u63A5\u5411 FinMind \u67E5\u8A62\u3002\u5982\u700F\u89BD\u5668\u963B\u64CB API\uFF0C\u53EF\u6539\u7528 APK \u6216\u532F\u5165 JSON\u3002\u4E00\u6B21\u6700\u591A 10 \u6A94\u3002";
         el("token").value = storedToken;

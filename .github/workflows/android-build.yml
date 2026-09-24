@@ -8,6 +8,7 @@ on:
       - main
     paths:
       - "web/**"
+      - "scripts/**"
       - "package.json"
       - "capacitor.config.json"
       - ".github/workflows/android-build.yml"
@@ -20,6 +21,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify v0.6.4 source files
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const html = fs.readFileSync('web/index.html', 'utf8');
+          const js = fs.readFileSync('web/main.js', 'utf8');
+          const required = [
+            [pkg.version === '0.6.4', `package.json version is ${pkg.version}, expected 0.6.4`],
+            [html.includes('v0.6.4'), 'web/index.html does not show v0.6.4'],
+            [html.includes('id="quick-chatgpt"'), 'web/index.html is missing the ChatGPT quick button'],
+            [html.includes('ChatGPT 深度分析'), 'web/index.html is missing ChatGPT 深度分析 text'],
+            [js.includes('ChatGPTLauncher'), 'web/main.js is missing ChatGPT launcher logic'],
+            [fs.existsSync('scripts/patch-android-chatgpt.mjs'), 'scripts/patch-android-chatgpt.mjs is missing']
+          ];
+          const errors = required.filter(([ok]) => !ok).map(([,msg]) => msg);
+          if (errors.length) {
+            console.error('Release verification failed:');
+            for (const e of errors) console.error('- ' + e);
+            process.exit(1);
+          }
+          console.log('Verified: Taiwan Stock Lab v0.6.4');
+          console.log('Verified: web/ ChatGPT button and launcher source are present');
+          NODE
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -45,6 +72,9 @@ jobs:
 
       - name: Sync web assets
         run: npx cap sync android
+
+      - name: Add direct ChatGPT launcher
+        run: node scripts/patch-android-chatgpt.mjs
 
       - name: Build debug APK
         working-directory: android

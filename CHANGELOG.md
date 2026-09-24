@@ -1,3 +1,12 @@
+# Changelog
+
+## 0.6.4
+- 在 App 標題與啟動狀態固定顯示版本號 `v0.6.4`，方便確認手機是否安裝最新 APK。
+- Android `versionName` 同步為 `0.6.4`，`versionCode` 更新為 `604`。
+- GitHub Actions 新增建置前驗證：確認版本號、`web/` 內容與 ChatGPT 按鈕存在；錯誤版本將直接停止建置。
+- 清除舊版備份檔，發佈 ZIP 根目錄直接放置可上傳的專案結構，降低上傳時路徑放錯的機率。
+- PWA 快取更新為 `stocklab-v0.6.4`。
+
 # 0.6.3
 
 - 修正 Android 個股總覽看不到 ChatGPT 按鈕的問題。
