@@ -1,3 +1,9 @@
+## 0.6.2
+- 將「🧠 ChatGPT 深度分析」快速按鈕移到個股總覽最上方的研究標的工具列，一進頁面即可看見。
+- 快速按鈕直接沿用原本的 ChatGPT 深度分析流程：優先開啟官方 ChatGPT App，失敗時改用系統分享。
+- 手機版按鈕改為整列顯示，避免被工具列其他按鈕擠到畫面外。
+- 更新 PWA 快取版本，降低升級後仍顯示舊介面的機率。
+
 # Changelog
 
 ## 0.6.1 — Direct ChatGPT handoff + High mode guidance

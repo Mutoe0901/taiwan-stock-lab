@@ -1502,7 +1502,9 @@
     page = p;
     document.querySelectorAll(".page").forEach((e) => e.classList.toggle("active", e.id === p));
     document.querySelectorAll("nav button").forEach((e) => e.classList.toggle("active", e.dataset.page === p));
-    $("page-title").textContent = { overview: "\u500B\u80A1\u7E3D\u89BD", bigdata: "\u5927\u6578\u64DA\u591A\u982D\u6A5F\u7387\u5206\u6790", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[p];
+    $("page-title").textContent = { scanner: "\u6383\u63CF\u9078\u80A1", overview: "\u500B\u80A1\u7E3D\u89BD", bigdata: "\u5927\u6578\u64DA\u591A\u982D\u6A5F\u7387\u5206\u6790", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[p];
+    const quickChatGPT = $("quick-chatgpt");
+    if (quickChatGPT) quickChatGPT.hidden = p !== "overview";
     history.replaceState(null, "", "#" + p);
   }
   function setBundle(raw) {
@@ -1973,6 +1975,7 @@
       };
       $("export-data").onclick = () => download(`stocklab_${bundle.mode === "demo" ? "DEMO" : "market"}.json`, JSON.stringify(bundle, null, 2));
       $("download-report-data").onclick = () => download(`${stockId}_report_input.json`, JSON.stringify(reportPayload(), null, 2));
+      $("quick-chatgpt").onclick = openChatGPTPrompt;
       $("open-chatgpt").onclick = openChatGPTPrompt;
       $("preview-chatgpt").onclick = previewChatGPTPrompt;
       $("copy-chatgpt").onclick = copyChatGPTPrompt;
