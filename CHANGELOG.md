@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.6.1 — Direct ChatGPT handoff + High mode guidance
+
+- 新增「🧠 直接用 ChatGPT 分析」按鈕。
+- Android 會優先以指定套件方式直接開啟官方 ChatGPT App，並把完整分析 Prompt 帶入。
+- 若 ChatGPT App 未安裝或無法接收內容，自動退回原本的 Android 系統分享選單。
+- 分析區塊明確標示完整個股研究建議使用 ChatGPT High 推理強度。
+- Prompt 開頭加入 High 推理強度建議，但不假裝 APK 能替使用者強制切換 ChatGPT 的推理設定。
+- PWA 快取版本更新。
+
+
+## 0.6.0 — ChatGPT handoff
+
+- 新增「用 ChatGPT 深度分析」區塊。
+- 自動把目前股票的行情、均線、MACD、KD、法人、大數據統計與近八期財務摘要整理成繁體中文 Prompt。
+- 新增 Prompt 預覽、複製與 Android 系統分享功能。
+- Android 可從分享選單選擇使用者自己已登入的 ChatGPT，不需要 OpenAI API Key。
+- 最新新聞與催化因素改由 ChatGPT 在收到 Prompt 後查證；本機資料與外部最新資料要求分開標示。
+- PWA 快取版本更新，避免舊版 main.js 持續被使用。
+
 ## Big Data update — 2026-09-17
 
 - 新增「大數據多頭機率分析」獨立頁面。
