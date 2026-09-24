@@ -1,3 +1,10 @@
+# 0.6.3
+
+- 修正 Android 個股總覽看不到 ChatGPT 按鈕的問題。
+- ChatGPT 深度分析按鈕改為直接放在「個股總覽」頁面最上方，不再依賴 toolbar 的 hidden 狀態。
+- Android 原生環境停用並清除舊 Service Worker / stocklab 快取，避免更新 APK 後仍顯示舊版介面。
+- PWA 快取版本更新為 stocklab-v2.2.3。
+
 ## 0.6.2
 - 將「🧠 ChatGPT 深度分析」快速按鈕移到個股總覽最上方的研究標的工具列，一進頁面即可看見。
 - 快速按鈕直接沿用原本的 ChatGPT 深度分析流程：優先開啟官方 ChatGPT App，失敗時改用系統分享。

@@ -9,19 +9,10 @@
 
 .scanner-controls{margin-top:14px}.scanner-actions{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}.scanner-check{display:flex;align-items:center;gap:8px}.scan-open{padding:.38rem .65rem;font-size:.75rem}.confidence{display:inline-block;padding:3px 7px;border-radius:999px;font-size:.72rem;background:#edf2f4;color:#4a6670}.confidence.high{background:#e8f5f0;color:#216c5a}.confidence.low{background:#fff4df;color:#81611d}.scanner-rank{font-weight:700}.scanner-muted{color:var(--muted)}
 
-/* ChatGPT handoff - v0.6.3 */
+/* ChatGPT handoff - v0.6.1 */
 .ai-panel{border-color:#c9ded9;background:linear-gradient(180deg,#fff,#f7fbfa)}
 .ai-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .prompt-preview{width:100%;min-height:52vh;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:14px;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink);background:#f8fafb;white-space:pre-wrap}
 #chatgpt-dialog{max-width:820px}
 #chatgpt-dialog .ai-actions{margin-top:14px;justify-content:flex-end}
 @media(max-width:800px){.ai-actions button{flex:1 1 140px}.prompt-preview{min-height:48vh}}
-
-.quick-chatgpt{white-space:nowrap;border-radius:8px}
-@media(max-width:800px){.toolbar .quick-chatgpt{order:3;flex:1 1 100%;width:100%;font-size:.92rem;padding:.78rem 1rem}.toolbar #export-data{order:4}.toolbar .meta{order:5}}
-
-/* v0.6.3: visible ChatGPT action at top of Overview */
-.overview-chatgpt-bar{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin:0 0 1rem;padding:.85rem 1rem;border:1px solid #c8ddd7;border-radius:12px;background:#eef8f4}
-.overview-chatgpt-bar .quick-chatgpt{flex:0 0 auto;font-weight:700}
-.overview-chatgpt-bar span{color:#587078;font-size:.92rem}
-@media(max-width:800px){.overview-chatgpt-bar{align-items:stretch}.overview-chatgpt-bar .quick-chatgpt{width:100%;padding:.9rem 1rem;font-size:1rem}.overview-chatgpt-bar span{width:100%;text-align:center}}
