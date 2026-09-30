@@ -1,5 +1,4 @@
 (() => {
-  var __defProp = Object.defineProperty;
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __esm = (fn, res, err) => function __init() {
     if (err) throw err[0];
@@ -9,1273 +8,72 @@
       throw err = [e], e;
     }
   };
-  var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
-  };
 
-  // node_modules/@capacitor/core/dist/index.js
-  var ExceptionCode, CapacitorException, getPlatformId, createCapacitor, initCapacitorGlobal, Capacitor, registerPlugin, WebPlugin, encode, decode, CapacitorCookiesPluginWeb, CapacitorCookies, readBlobAsBase64, normalizeHttpHeaders, buildUrlParams, buildRequestInit, CapacitorHttpPluginWeb, CapacitorHttp, SystemBarsStyle, SystemBarType, SystemBarsPluginWeb, SystemBars;
-  var init_dist = __esm({
-    "node_modules/@capacitor/core/dist/index.js"() {
-      (function(ExceptionCode2) {
-        ExceptionCode2["Unimplemented"] = "UNIMPLEMENTED";
-        ExceptionCode2["Unavailable"] = "UNAVAILABLE";
-      })(ExceptionCode || (ExceptionCode = {}));
-      CapacitorException = class extends Error {
-        constructor(message, code, data) {
-          super(message);
-          this.message = message;
-          this.code = code;
-          this.data = data;
-        }
-      };
-      getPlatformId = (win) => {
-        var _a, _b;
-        if (win === null || win === void 0 ? void 0 : win.androidBridge) {
-          return "android";
-        } else if ((_b = (_a = win === null || win === void 0 ? void 0 : win.webkit) === null || _a === void 0 ? void 0 : _a.messageHandlers) === null || _b === void 0 ? void 0 : _b.bridge) {
-          return "ios";
-        } else {
-          return "web";
-        }
-      };
-      createCapacitor = (win) => {
-        const capCustomPlatform = win.CapacitorCustomPlatform || null;
-        const cap = win.Capacitor || {};
-        const Plugins = cap.Plugins = cap.Plugins || {};
-        const getPlatform = () => {
-          return capCustomPlatform !== null ? capCustomPlatform.name : getPlatformId(win);
-        };
-        const isNativePlatform = () => getPlatform() !== "web";
-        const isPluginAvailable = (pluginName) => {
-          const plugin = registeredPlugins.get(pluginName);
-          if (plugin === null || plugin === void 0 ? void 0 : plugin.platforms.has(getPlatform())) {
-            return true;
-          }
-          if (getPluginHeader(pluginName)) {
-            return true;
-          }
-          return false;
-        };
-        const getPluginHeader = (pluginName) => {
-          var _a;
-          return (_a = cap.PluginHeaders) === null || _a === void 0 ? void 0 : _a.find((h) => h.name === pluginName);
-        };
-        const handleError = (err) => win.console.error(err);
-        const registeredPlugins = /* @__PURE__ */ new Map();
-        const registerPlugin2 = (pluginName, jsImplementations = {}) => {
-          const registeredPlugin = registeredPlugins.get(pluginName);
-          if (registeredPlugin) {
-            console.warn(`Capacitor plugin "${pluginName}" already registered. Cannot register plugins twice.`);
-            return registeredPlugin.proxy;
-          }
-          const platform = getPlatform();
-          const pluginHeader = getPluginHeader(pluginName);
-          let jsImplementation;
-          const loadPluginImplementation = async () => {
-            if (!jsImplementation && platform in jsImplementations) {
-              jsImplementation = typeof jsImplementations[platform] === "function" ? jsImplementation = await jsImplementations[platform]() : jsImplementation = jsImplementations[platform];
-            } else if (capCustomPlatform !== null && !jsImplementation && "web" in jsImplementations) {
-              jsImplementation = typeof jsImplementations["web"] === "function" ? jsImplementation = await jsImplementations["web"]() : jsImplementation = jsImplementations["web"];
-            }
-            return jsImplementation;
-          };
-          const createPluginMethod = (impl, prop) => {
-            var _a, _b;
-            if (pluginHeader) {
-              const methodHeader = pluginHeader === null || pluginHeader === void 0 ? void 0 : pluginHeader.methods.find((m) => prop === m.name);
-              if (methodHeader) {
-                if (methodHeader.rtype === "promise") {
-                  return (options) => cap.nativePromise(pluginName, prop.toString(), options);
-                } else {
-                  return (options, callback) => cap.nativeCallback(pluginName, prop.toString(), options, callback);
-                }
-              } else if (impl) {
-                return (_a = impl[prop]) === null || _a === void 0 ? void 0 : _a.bind(impl);
-              }
-            } else if (impl) {
-              return (_b = impl[prop]) === null || _b === void 0 ? void 0 : _b.bind(impl);
-            } else {
-              throw new CapacitorException(`"${pluginName}" plugin is not implemented on ${platform}`, ExceptionCode.Unimplemented);
-            }
-          };
-          const createPluginMethodWrapper = (prop) => {
-            let remove;
-            const wrapper = (...args) => {
-              const p = loadPluginImplementation().then((impl) => {
-                const fn = createPluginMethod(impl, prop);
-                if (fn) {
-                  const p2 = fn(...args);
-                  remove = p2 === null || p2 === void 0 ? void 0 : p2.remove;
-                  return p2;
-                } else {
-                  throw new CapacitorException(`"${pluginName}.${prop}()" is not implemented on ${platform}`, ExceptionCode.Unimplemented);
-                }
-              });
-              if (prop === "addListener") {
-                p.remove = async () => remove();
-              }
-              return p;
-            };
-            wrapper.toString = () => `${prop.toString()}() { [capacitor code] }`;
-            Object.defineProperty(wrapper, "name", {
-              value: prop,
-              writable: false,
-              configurable: false
-            });
-            return wrapper;
-          };
-          const addListener = createPluginMethodWrapper("addListener");
-          const removeListener = createPluginMethodWrapper("removeListener");
-          const addListenerNative = (eventName, callback) => {
-            const call = addListener({ eventName }, callback);
-            const remove = async () => {
-              const callbackId = await call;
-              removeListener({
-                eventName,
-                callbackId
-              }, callback);
-            };
-            const p = new Promise((resolve2) => call.then(() => resolve2({ remove })));
-            p.remove = async () => {
-              console.warn(`Using addListener() without 'await' is deprecated.`);
-              await remove();
-            };
-            return p;
-          };
-          const proxy = new Proxy({}, {
-            get(_, prop) {
-              switch (prop) {
-                // https://github.com/facebook/react/issues/20030
-                case "$$typeof":
-                  return void 0;
-                case "toJSON":
-                  return () => ({});
-                case "addListener":
-                  return pluginHeader ? addListenerNative : addListener;
-                case "removeListener":
-                  return removeListener;
-                default:
-                  return createPluginMethodWrapper(prop);
-              }
-            }
-          });
-          Plugins[pluginName] = proxy;
-          registeredPlugins.set(pluginName, {
-            name: pluginName,
-            proxy,
-            platforms: /* @__PURE__ */ new Set([...Object.keys(jsImplementations), ...pluginHeader ? [platform] : []])
-          });
-          return proxy;
-        };
-        if (!cap.convertFileSrc) {
-          cap.convertFileSrc = (filePath) => filePath;
-        }
-        cap.getPlatform = getPlatform;
-        cap.handleError = handleError;
-        cap.isNativePlatform = isNativePlatform;
-        cap.isPluginAvailable = isPluginAvailable;
-        cap.registerPlugin = registerPlugin2;
-        cap.Exception = CapacitorException;
-        cap.DEBUG = !!cap.DEBUG;
-        cap.isLoggingEnabled = !!cap.isLoggingEnabled;
-        return cap;
-      };
-      initCapacitorGlobal = (win) => win.Capacitor = createCapacitor(win);
-      Capacitor = /* @__PURE__ */ initCapacitorGlobal(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : {});
-      registerPlugin = Capacitor.registerPlugin;
-      WebPlugin = class {
-        constructor() {
-          this.listeners = {};
-          this.retainedEventArguments = {};
-          this.windowListeners = {};
-        }
-        addListener(eventName, listenerFunc) {
-          let firstListener = false;
-          const listeners = this.listeners[eventName];
-          if (!listeners) {
-            this.listeners[eventName] = [];
-            firstListener = true;
-          }
-          this.listeners[eventName].push(listenerFunc);
-          const windowListener = this.windowListeners[eventName];
-          if (windowListener && !windowListener.registered) {
-            this.addWindowListener(windowListener);
-          }
-          if (firstListener) {
-            this.sendRetainedArgumentsForEvent(eventName);
-          }
-          const remove = async () => this.removeListener(eventName, listenerFunc);
-          const p = Promise.resolve({ remove });
-          return p;
-        }
-        async removeAllListeners() {
-          this.listeners = {};
-          for (const listener in this.windowListeners) {
-            this.removeWindowListener(this.windowListeners[listener]);
-          }
-          this.windowListeners = {};
-        }
-        notifyListeners(eventName, data, retainUntilConsumed) {
-          const listeners = this.listeners[eventName];
-          if (!listeners) {
-            if (retainUntilConsumed) {
-              let args = this.retainedEventArguments[eventName];
-              if (!args) {
-                args = [];
-              }
-              args.push(data);
-              this.retainedEventArguments[eventName] = args;
-            }
-            return;
-          }
-          listeners.forEach((listener) => listener(data));
-        }
-        hasListeners(eventName) {
-          var _a;
-          return !!((_a = this.listeners[eventName]) === null || _a === void 0 ? void 0 : _a.length);
-        }
-        registerWindowListener(windowEventName, pluginEventName) {
-          this.windowListeners[pluginEventName] = {
-            registered: false,
-            windowEventName,
-            pluginEventName,
-            handler: (event) => {
-              this.notifyListeners(pluginEventName, event);
-            }
-          };
-        }
-        unimplemented(msg = "not implemented") {
-          return new Capacitor.Exception(msg, ExceptionCode.Unimplemented);
-        }
-        unavailable(msg = "not available") {
-          return new Capacitor.Exception(msg, ExceptionCode.Unavailable);
-        }
-        async removeListener(eventName, listenerFunc) {
-          const listeners = this.listeners[eventName];
-          if (!listeners) {
-            return;
-          }
-          const index = listeners.indexOf(listenerFunc);
-          if (index !== -1) {
-            this.listeners[eventName].splice(index, 1);
-          }
-          if (!this.listeners[eventName].length) {
-            this.removeWindowListener(this.windowListeners[eventName]);
-          }
-        }
-        addWindowListener(handle) {
-          window.addEventListener(handle.windowEventName, handle.handler);
-          handle.registered = true;
-        }
-        removeWindowListener(handle) {
-          if (!handle) {
-            return;
-          }
-          window.removeEventListener(handle.windowEventName, handle.handler);
-          handle.registered = false;
-        }
-        sendRetainedArgumentsForEvent(eventName) {
-          const args = this.retainedEventArguments[eventName];
-          if (!args) {
-            return;
-          }
-          delete this.retainedEventArguments[eventName];
-          args.forEach((arg) => {
-            this.notifyListeners(eventName, arg);
-          });
-        }
-      };
-      encode = (str) => encodeURIComponent(str).replace(/%(2[346B]|5E|60|7C)/g, decodeURIComponent).replace(/[()]/g, escape);
-      decode = (str) => str.replace(/(%[\dA-F]{2})+/gi, decodeURIComponent);
-      CapacitorCookiesPluginWeb = class extends WebPlugin {
-        async getCookies() {
-          const cookies = document.cookie;
-          const cookieMap = {};
-          cookies.split(";").forEach((cookie) => {
-            if (cookie.length <= 0)
-              return;
-            let [key, value] = cookie.replace(/=/, "CAP_COOKIE").split("CAP_COOKIE");
-            key = decode(key).trim();
-            value = decode(value).trim();
-            cookieMap[key] = value;
-          });
-          return cookieMap;
-        }
-        async setCookie(options) {
-          try {
-            const encodedKey = encode(options.key);
-            const encodedValue = encode(options.value);
-            const expires = options.expires ? `; expires=${options.expires.replace("expires=", "")}` : "";
-            const path = (options.path || "/").replace("path=", "");
-            const domain = options.url != null && options.url.length > 0 ? `domain=${options.url}` : "";
-            document.cookie = `${encodedKey}=${encodedValue || ""}${expires}; path=${path}; ${domain};`;
-          } catch (error2) {
-            return Promise.reject(error2);
-          }
-        }
-        async deleteCookie(options) {
-          try {
-            document.cookie = `${options.key}=; Max-Age=0`;
-          } catch (error2) {
-            return Promise.reject(error2);
-          }
-        }
-        async clearCookies() {
-          try {
-            const cookies = document.cookie.split(";") || [];
-            for (const cookie of cookies) {
-              document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, `=;expires=${(/* @__PURE__ */ new Date()).toUTCString()};path=/`);
-            }
-          } catch (error2) {
-            return Promise.reject(error2);
-          }
-        }
-        async clearAllCookies() {
-          try {
-            await this.clearCookies();
-          } catch (error2) {
-            return Promise.reject(error2);
-          }
-        }
-      };
-      CapacitorCookies = registerPlugin("CapacitorCookies", {
-        web: () => new CapacitorCookiesPluginWeb()
-      });
-      readBlobAsBase64 = async (blob) => new Promise((resolve2, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64String = reader.result;
-          resolve2(base64String.indexOf(",") >= 0 ? base64String.split(",")[1] : base64String);
-        };
-        reader.onerror = (error2) => reject(error2);
-        reader.readAsDataURL(blob);
-      });
-      normalizeHttpHeaders = (headers = {}) => {
-        const originalKeys = Object.keys(headers);
-        const loweredKeys = Object.keys(headers).map((k) => k.toLocaleLowerCase());
-        const normalized = loweredKeys.reduce((acc, key, index) => {
-          acc[key] = headers[originalKeys[index]];
-          return acc;
-        }, {});
-        return normalized;
-      };
-      buildUrlParams = (params2, shouldEncode = true) => {
-        if (!params2)
-          return null;
-        const output = Object.entries(params2).reduce((accumulator, entry) => {
-          const [key, value] = entry;
-          let encodedValue;
-          let item;
-          if (Array.isArray(value)) {
-            item = "";
-            value.forEach((str) => {
-              encodedValue = shouldEncode ? encodeURIComponent(str) : str;
-              item += `${key}=${encodedValue}&`;
-            });
-            item.slice(0, -1);
-          } else {
-            encodedValue = shouldEncode ? encodeURIComponent(value) : value;
-            item = `${key}=${encodedValue}`;
-          }
-          return `${accumulator}&${item}`;
-        }, "");
-        return output.substr(1);
-      };
-      buildRequestInit = (options, extra = {}) => {
-        const output = Object.assign({ method: options.method || "GET", headers: options.headers }, extra);
-        const headers = normalizeHttpHeaders(options.headers);
-        const type = headers["content-type"] || "";
-        if (typeof options.data === "string") {
-          output.body = options.data;
-        } else if (type.includes("application/x-www-form-urlencoded")) {
-          const params2 = new URLSearchParams();
-          for (const [key, value] of Object.entries(options.data || {})) {
-            params2.set(key, value);
-          }
-          output.body = params2.toString();
-        } else if (type.includes("multipart/form-data") || options.data instanceof FormData) {
-          const form = new FormData();
-          if (options.data instanceof FormData) {
-            options.data.forEach((value, key) => {
-              form.append(key, value);
-            });
-          } else {
-            for (const key of Object.keys(options.data)) {
-              form.append(key, options.data[key]);
-            }
-          }
-          output.body = form;
-          const headers2 = new Headers(output.headers);
-          headers2.delete("content-type");
-          output.headers = headers2;
-        } else if (type.includes("application/json") || typeof options.data === "object") {
-          output.body = JSON.stringify(options.data);
-        }
-        return output;
-      };
-      CapacitorHttpPluginWeb = class extends WebPlugin {
-        /**
-         * Perform an Http request given a set of options
-         * @param options Options to build the HTTP request
-         */
-        async request(options) {
-          const requestInit = buildRequestInit(options, options.webFetchExtra);
-          const urlParams = buildUrlParams(options.params, options.shouldEncodeUrlParams);
-          const url = urlParams ? `${options.url}?${urlParams}` : options.url;
-          const response = await fetch(url, requestInit);
-          const contentType = response.headers.get("content-type") || "";
-          let { responseType = "text" } = response.ok ? options : {};
-          if (contentType.includes("application/json")) {
-            responseType = "json";
-          }
-          let data;
-          let blob;
-          switch (responseType) {
-            case "arraybuffer":
-            case "blob":
-              blob = await response.blob();
-              data = await readBlobAsBase64(blob);
-              break;
-            case "json":
-              data = await response.json();
-              break;
-            case "document":
-            case "text":
-            default:
-              data = await response.text();
-          }
-          const headers = {};
-          response.headers.forEach((value, key) => {
-            headers[key] = value;
-          });
-          return {
-            data,
-            headers,
-            status: response.status,
-            url: response.url
-          };
-        }
-        /**
-         * Perform an Http GET request given a set of options
-         * @param options Options to build the HTTP request
-         */
-        async get(options) {
-          return this.request(Object.assign(Object.assign({}, options), { method: "GET" }));
-        }
-        /**
-         * Perform an Http POST request given a set of options
-         * @param options Options to build the HTTP request
-         */
-        async post(options) {
-          return this.request(Object.assign(Object.assign({}, options), { method: "POST" }));
-        }
-        /**
-         * Perform an Http PUT request given a set of options
-         * @param options Options to build the HTTP request
-         */
-        async put(options) {
-          return this.request(Object.assign(Object.assign({}, options), { method: "PUT" }));
-        }
-        /**
-         * Perform an Http PATCH request given a set of options
-         * @param options Options to build the HTTP request
-         */
-        async patch(options) {
-          return this.request(Object.assign(Object.assign({}, options), { method: "PATCH" }));
-        }
-        /**
-         * Perform an Http DELETE request given a set of options
-         * @param options Options to build the HTTP request
-         */
-        async delete(options) {
-          return this.request(Object.assign(Object.assign({}, options), { method: "DELETE" }));
-        }
-      };
-      CapacitorHttp = registerPlugin("CapacitorHttp", {
-        web: () => new CapacitorHttpPluginWeb()
-      });
-      (function(SystemBarsStyle2) {
-        SystemBarsStyle2["Dark"] = "DARK";
-        SystemBarsStyle2["Light"] = "LIGHT";
-        SystemBarsStyle2["Default"] = "DEFAULT";
-      })(SystemBarsStyle || (SystemBarsStyle = {}));
-      (function(SystemBarType2) {
-        SystemBarType2["StatusBar"] = "StatusBar";
-        SystemBarType2["NavigationBar"] = "NavigationBar";
-      })(SystemBarType || (SystemBarType = {}));
-      SystemBarsPluginWeb = class extends WebPlugin {
-        async setStyle() {
-          this.unavailable("not available for web");
-        }
-        async setAnimation() {
-          this.unavailable("not available for web");
-        }
-        async show() {
-          this.unavailable("not available for web");
-        }
-        async hide() {
-          this.unavailable("not available for web");
-        }
-      };
-      SystemBars = registerPlugin("SystemBars", {
-        web: () => new SystemBarsPluginWeb()
-      });
-    }
-  });
-
-  // node_modules/@capacitor/filesystem/dist/esm/definitions.js
-  var Directory, Encoding;
-  var init_definitions = __esm({
-    "node_modules/@capacitor/filesystem/dist/esm/definitions.js"() {
-      (function(Directory2) {
-        Directory2["Documents"] = "DOCUMENTS";
-        Directory2["Data"] = "DATA";
-        Directory2["Library"] = "LIBRARY";
-        Directory2["Cache"] = "CACHE";
-        Directory2["External"] = "EXTERNAL";
-        Directory2["ExternalStorage"] = "EXTERNAL_STORAGE";
-        Directory2["ExternalCache"] = "EXTERNAL_CACHE";
-        Directory2["LibraryNoCloud"] = "LIBRARY_NO_CLOUD";
-        Directory2["Temporary"] = "TEMPORARY";
-      })(Directory || (Directory = {}));
-      (function(Encoding2) {
-        Encoding2["UTF8"] = "utf8";
-        Encoding2["ASCII"] = "ascii";
-        Encoding2["UTF16"] = "utf16";
-      })(Encoding || (Encoding = {}));
-    }
-  });
-
-  // node_modules/@capacitor/filesystem/dist/esm/web.js
-  var web_exports = {};
-  __export(web_exports, {
-    FilesystemWeb: () => FilesystemWeb
-  });
-  function resolve(path) {
-    const posix = path.split("/").filter((item) => item !== ".");
-    const newPosix = [];
-    posix.forEach((item) => {
-      if (item === ".." && newPosix.length > 0 && newPosix[newPosix.length - 1] !== "..") {
-        newPosix.pop();
-      } else {
-        newPosix.push(item);
-      }
-    });
-    return newPosix.join("/");
-  }
-  function isPathParent(parent, children) {
-    parent = resolve(parent);
-    children = resolve(children);
-    const pathsA = parent.split("/");
-    const pathsB = children.split("/");
-    return parent !== children && pathsA.every((value, index) => value === pathsB[index]);
-  }
-  var FilesystemWeb;
-  var init_web = __esm({
-    "node_modules/@capacitor/filesystem/dist/esm/web.js"() {
-      init_dist();
-      init_definitions();
-      FilesystemWeb = class _FilesystemWeb extends WebPlugin {
-        constructor() {
-          super(...arguments);
-          this.DB_VERSION = 1;
-          this.DB_NAME = "Disc";
-          this._writeCmds = ["add", "put", "delete"];
-          this.downloadFile = async (options) => {
-            var _a, _b;
-            const requestInit = buildRequestInit(options, options.webFetchExtra);
-            const response = await fetch(options.url, requestInit);
-            let blob;
-            if (!options.progress)
-              blob = await response.blob();
-            else if (!(response === null || response === void 0 ? void 0 : response.body))
-              blob = new Blob();
-            else {
-              const reader = response.body.getReader();
-              let bytes = 0;
-              const chunks = [];
-              const contentType = response.headers.get("content-type");
-              const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done)
-                  break;
-                chunks.push(value);
-                bytes += (value === null || value === void 0 ? void 0 : value.length) || 0;
-                const status2 = {
-                  url: options.url,
-                  bytes,
-                  contentLength
-                };
-                this.notifyListeners("progress", status2);
-              }
-              const allChunks = new Uint8Array(bytes);
-              let position = 0;
-              for (const chunk of chunks) {
-                if (typeof chunk === "undefined")
-                  continue;
-                allChunks.set(chunk, position);
-                position += chunk.length;
-              }
-              blob = new Blob([allChunks.buffer], { type: contentType || void 0 });
-            }
-            const result = await this.writeFile({
-              path: options.path,
-              directory: (_a = options.directory) !== null && _a !== void 0 ? _a : void 0,
-              recursive: (_b = options.recursive) !== null && _b !== void 0 ? _b : false,
-              data: blob
-            });
-            return { path: result.uri, blob };
-          };
-        }
-        readFileInChunks(_options, _callback) {
-          throw this.unavailable("Method not implemented.");
-        }
-        async initDb() {
-          if (this._db !== void 0) {
-            return this._db;
-          }
-          if (!("indexedDB" in window)) {
-            throw this.unavailable("This browser doesn't support IndexedDB");
-          }
-          return new Promise((resolve2, reject) => {
-            const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
-            request.onupgradeneeded = _FilesystemWeb.doUpgrade;
-            request.onsuccess = () => {
-              this._db = request.result;
-              resolve2(request.result);
-            };
-            request.onerror = () => reject(request.error);
-            request.onblocked = () => {
-              console.warn("db blocked");
-            };
-          });
-        }
-        static doUpgrade(event) {
-          const eventTarget = event.target;
-          const db = eventTarget.result;
-          switch (event.oldVersion) {
-            case 0:
-            case 1:
-            default: {
-              if (db.objectStoreNames.contains("FileStorage")) {
-                db.deleteObjectStore("FileStorage");
-              }
-              const store = db.createObjectStore("FileStorage", { keyPath: "path" });
-              store.createIndex("by_folder", "folder");
-            }
-          }
-        }
-        async dbRequest(cmd, args) {
-          const readFlag = this._writeCmds.indexOf(cmd) !== -1 ? "readwrite" : "readonly";
-          return this.initDb().then((conn) => {
-            return new Promise((resolve2, reject) => {
-              const tx = conn.transaction(["FileStorage"], readFlag);
-              const store = tx.objectStore("FileStorage");
-              const req = store[cmd](...args);
-              req.onsuccess = () => resolve2(req.result);
-              req.onerror = () => reject(req.error);
-            });
-          });
-        }
-        async dbIndexRequest(indexName, cmd, args) {
-          const readFlag = this._writeCmds.indexOf(cmd) !== -1 ? "readwrite" : "readonly";
-          return this.initDb().then((conn) => {
-            return new Promise((resolve2, reject) => {
-              const tx = conn.transaction(["FileStorage"], readFlag);
-              const store = tx.objectStore("FileStorage");
-              const index = store.index(indexName);
-              const req = index[cmd](...args);
-              req.onsuccess = () => resolve2(req.result);
-              req.onerror = () => reject(req.error);
-            });
-          });
-        }
-        getPath(directory, uriPath) {
-          const cleanedUriPath = uriPath !== void 0 ? uriPath.replace(/^[/]+|[/]+$/g, "") : "";
-          let fsPath = "";
-          if (directory !== void 0)
-            fsPath += "/" + directory;
-          if (uriPath !== "")
-            fsPath += "/" + cleanedUriPath;
-          return fsPath;
-        }
-        async clear() {
-          const conn = await this.initDb();
-          const tx = conn.transaction(["FileStorage"], "readwrite");
-          const store = tx.objectStore("FileStorage");
-          store.clear();
-        }
-        /**
-         * Read a file from disk
-         * @param options options for the file read
-         * @return a promise that resolves with the read file data result
-         */
-        async readFile(options) {
-          const path = this.getPath(options.directory, options.path);
-          const entry = await this.dbRequest("get", [path]);
-          if (entry === void 0)
-            throw Error("File does not exist.");
-          return { data: entry.content ? entry.content : "" };
-        }
-        /**
-         * Write a file to disk in the specified location on device
-         * @param options options for the file write
-         * @return a promise that resolves with the file write result
-         */
-        async writeFile(options) {
-          const path = this.getPath(options.directory, options.path);
-          let data = options.data;
-          const encoding = options.encoding;
-          const doRecursive = options.recursive;
-          const occupiedEntry = await this.dbRequest("get", [path]);
-          if (occupiedEntry && occupiedEntry.type === "directory")
-            throw Error("The supplied path is a directory.");
-          const parentPath = path.substr(0, path.lastIndexOf("/"));
-          const parentEntry = await this.dbRequest("get", [parentPath]);
-          if (parentEntry === void 0) {
-            const subDirIndex = parentPath.indexOf("/", 1);
-            if (subDirIndex !== -1) {
-              const parentArgPath = parentPath.substr(subDirIndex);
-              await this.mkdir({
-                path: parentArgPath,
-                directory: options.directory,
-                recursive: doRecursive
-              });
-            }
-          }
-          if (!encoding && !(data instanceof Blob)) {
-            data = data.indexOf(",") >= 0 ? data.split(",")[1] : data;
-            if (!this.isBase64String(data))
-              throw Error("The supplied data is not valid base64 content.");
-          }
-          const now = Date.now();
-          const pathObj = {
-            path,
-            folder: parentPath,
-            type: "file",
-            size: data instanceof Blob ? data.size : data.length,
-            ctime: now,
-            mtime: now,
-            content: data
-          };
-          await this.dbRequest("put", [pathObj]);
-          return {
-            uri: pathObj.path
-          };
-        }
-        /**
-         * Append to a file on disk in the specified location on device
-         * @param options options for the file append
-         * @return a promise that resolves with the file write result
-         */
-        async appendFile(options) {
-          const path = this.getPath(options.directory, options.path);
-          let data = options.data;
-          const encoding = options.encoding;
-          const parentPath = path.substr(0, path.lastIndexOf("/"));
-          const now = Date.now();
-          let ctime = now;
-          const occupiedEntry = await this.dbRequest("get", [path]);
-          if (occupiedEntry && occupiedEntry.type === "directory")
-            throw Error("The supplied path is a directory.");
-          const parentEntry = await this.dbRequest("get", [parentPath]);
-          if (parentEntry === void 0) {
-            const subDirIndex = parentPath.indexOf("/", 1);
-            if (subDirIndex !== -1) {
-              const parentArgPath = parentPath.substr(subDirIndex);
-              await this.mkdir({
-                path: parentArgPath,
-                directory: options.directory,
-                recursive: true
-              });
-            }
-          }
-          if (!encoding && !this.isBase64String(data))
-            throw Error("The supplied data is not valid base64 content.");
-          if (occupiedEntry !== void 0) {
-            if (occupiedEntry.content instanceof Blob) {
-              throw Error("The occupied entry contains a Blob object which cannot be appended to.");
-            }
-            if (occupiedEntry.content !== void 0 && !encoding) {
-              data = btoa(atob(occupiedEntry.content) + atob(data));
-            } else {
-              data = occupiedEntry.content + data;
-            }
-            ctime = occupiedEntry.ctime;
-          }
-          const pathObj = {
-            path,
-            folder: parentPath,
-            type: "file",
-            size: data.length,
-            ctime,
-            mtime: now,
-            content: data
-          };
-          await this.dbRequest("put", [pathObj]);
-        }
-        /**
-         * Delete a file from disk
-         * @param options options for the file delete
-         * @return a promise that resolves with the deleted file data result
-         */
-        async deleteFile(options) {
-          const path = this.getPath(options.directory, options.path);
-          const entry = await this.dbRequest("get", [path]);
-          if (entry === void 0)
-            throw Error("File does not exist.");
-          const entries = await this.dbIndexRequest("by_folder", "getAllKeys", [IDBKeyRange.only(path)]);
-          if (entries.length !== 0)
-            throw Error("Folder is not empty.");
-          await this.dbRequest("delete", [path]);
-        }
-        /**
-         * Create a directory.
-         * @param options options for the mkdir
-         * @return a promise that resolves with the mkdir result
-         */
-        async mkdir(options) {
-          const path = this.getPath(options.directory, options.path);
-          const doRecursive = options.recursive;
-          const parentPath = path.substr(0, path.lastIndexOf("/"));
-          const depth = (path.match(/\//g) || []).length;
-          const parentEntry = await this.dbRequest("get", [parentPath]);
-          const occupiedEntry = await this.dbRequest("get", [path]);
-          if (depth === 1)
-            throw Error("Cannot create Root directory");
-          if (occupiedEntry !== void 0)
-            throw Error("Current directory does already exist.");
-          if (!doRecursive && depth !== 2 && parentEntry === void 0)
-            throw Error("Parent directory must exist");
-          if (doRecursive && depth !== 2 && parentEntry === void 0) {
-            const parentArgPath = parentPath.substr(parentPath.indexOf("/", 1));
-            await this.mkdir({
-              path: parentArgPath,
-              directory: options.directory,
-              recursive: doRecursive
-            });
-          }
-          const now = Date.now();
-          const pathObj = {
-            path,
-            folder: parentPath,
-            type: "directory",
-            size: 0,
-            ctime: now,
-            mtime: now
-          };
-          await this.dbRequest("put", [pathObj]);
-        }
-        /**
-         * Remove a directory
-         * @param options the options for the directory remove
-         */
-        async rmdir(options) {
-          const { path, directory, recursive } = options;
-          const fullPath = this.getPath(directory, path);
-          const entry = await this.dbRequest("get", [fullPath]);
-          if (entry === void 0)
-            throw Error("Folder does not exist.");
-          if (entry.type !== "directory")
-            throw Error("Requested path is not a directory");
-          const readDirResult = await this.readdir({ path, directory });
-          if (readDirResult.files.length !== 0 && !recursive)
-            throw Error("Folder is not empty");
-          for (const entry2 of readDirResult.files) {
-            const entryPath = `${path}/${entry2.name}`;
-            const entryObj = await this.stat({ path: entryPath, directory });
-            if (entryObj.type === "file") {
-              await this.deleteFile({ path: entryPath, directory });
-            } else {
-              await this.rmdir({ path: entryPath, directory, recursive });
-            }
-          }
-          await this.dbRequest("delete", [fullPath]);
-        }
-        /**
-         * Return a list of files from the directory (not recursive)
-         * @param options the options for the readdir operation
-         * @return a promise that resolves with the readdir directory listing result
-         */
-        async readdir(options) {
-          const path = this.getPath(options.directory, options.path);
-          const entry = await this.dbRequest("get", [path]);
-          if (options.path !== "" && entry === void 0)
-            throw Error("Folder does not exist.");
-          const entries = await this.dbIndexRequest("by_folder", "getAllKeys", [IDBKeyRange.only(path)]);
-          const files = await Promise.all(entries.map(async (e) => {
-            let subEntry = await this.dbRequest("get", [e]);
-            if (subEntry === void 0) {
-              subEntry = await this.dbRequest("get", [e + "/"]);
-            }
-            return {
-              name: e.substring(path.length + 1),
-              type: subEntry.type,
-              size: subEntry.size,
-              ctime: subEntry.ctime,
-              mtime: subEntry.mtime,
-              uri: subEntry.path
-            };
-          }));
-          return { files };
-        }
-        /**
-         * Return full File URI for a path and directory
-         * @param options the options for the stat operation
-         * @return a promise that resolves with the file stat result
-         */
-        async getUri(options) {
-          const path = this.getPath(options.directory, options.path);
-          let entry = await this.dbRequest("get", [path]);
-          if (entry === void 0) {
-            entry = await this.dbRequest("get", [path + "/"]);
-          }
-          return {
-            uri: (entry === null || entry === void 0 ? void 0 : entry.path) || path
-          };
-        }
-        /**
-         * Return data about a file
-         * @param options the options for the stat operation
-         * @return a promise that resolves with the file stat result
-         */
-        async stat(options) {
-          const path = this.getPath(options.directory, options.path);
-          let entry = await this.dbRequest("get", [path]);
-          if (entry === void 0) {
-            entry = await this.dbRequest("get", [path + "/"]);
-          }
-          if (entry === void 0)
-            throw Error("Entry does not exist.");
-          return {
-            name: entry.path.substring(path.length + 1),
-            type: entry.type,
-            size: entry.size,
-            ctime: entry.ctime,
-            mtime: entry.mtime,
-            uri: entry.path
-          };
-        }
-        /**
-         * Rename a file or directory
-         * @param options the options for the rename operation
-         * @return a promise that resolves with the rename result
-         */
-        async rename(options) {
-          await this._copy(options, true);
-          return;
-        }
-        /**
-         * Copy a file or directory
-         * @param options the options for the copy operation
-         * @return a promise that resolves with the copy result
-         */
-        async copy(options) {
-          return this._copy(options, false);
-        }
-        async requestPermissions() {
-          return { publicStorage: "granted" };
-        }
-        async checkPermissions() {
-          return { publicStorage: "granted" };
-        }
-        /**
-         * Function that can perform a copy or a rename
-         * @param options the options for the rename operation
-         * @param doRename whether to perform a rename or copy operation
-         * @return a promise that resolves with the result
-         */
-        async _copy(options, doRename = false) {
-          let { toDirectory } = options;
-          const { to, from, directory: fromDirectory } = options;
-          if (!to || !from) {
-            throw Error("Both to and from must be provided");
-          }
-          if (!toDirectory) {
-            toDirectory = fromDirectory;
-          }
-          const fromPath = this.getPath(fromDirectory, from);
-          const toPath = this.getPath(toDirectory, to);
-          if (fromPath === toPath) {
-            return {
-              uri: toPath
-            };
-          }
-          if (isPathParent(fromPath, toPath)) {
-            throw Error("To path cannot contain the from path");
-          }
-          let toObj;
-          try {
-            toObj = await this.stat({
-              path: to,
-              directory: toDirectory
-            });
-          } catch (e) {
-            const toPathComponents = to.split("/");
-            toPathComponents.pop();
-            const toPath2 = toPathComponents.join("/");
-            if (toPathComponents.length > 0) {
-              const toParentDirectory = await this.stat({
-                path: toPath2,
-                directory: toDirectory
-              });
-              if (toParentDirectory.type !== "directory") {
-                throw new Error("Parent directory of the to path is a file");
-              }
-            }
-          }
-          if (toObj && toObj.type === "directory") {
-            throw new Error("Cannot overwrite a directory with a file");
-          }
-          const fromObj = await this.stat({
-            path: from,
-            directory: fromDirectory
-          });
-          const updateTime = async (path, ctime2, mtime) => {
-            const fullPath = this.getPath(toDirectory, path);
-            const entry = await this.dbRequest("get", [fullPath]);
-            entry.ctime = ctime2;
-            entry.mtime = mtime;
-            await this.dbRequest("put", [entry]);
-          };
-          const ctime = fromObj.ctime ? fromObj.ctime : Date.now();
-          switch (fromObj.type) {
-            // The "from" object is a file
-            case "file": {
-              const file = await this.readFile({
-                path: from,
-                directory: fromDirectory
-              });
-              if (doRename) {
-                await this.deleteFile({
-                  path: from,
-                  directory: fromDirectory
-                });
-              }
-              let encoding;
-              if (!(file.data instanceof Blob) && !this.isBase64String(file.data)) {
-                encoding = Encoding.UTF8;
-              }
-              const writeResult = await this.writeFile({
-                path: to,
-                directory: toDirectory,
-                data: file.data,
-                encoding
-              });
-              if (doRename) {
-                await updateTime(to, ctime, fromObj.mtime);
-              }
-              return writeResult;
-            }
-            case "directory": {
-              if (toObj) {
-                throw Error("Cannot move a directory over an existing object");
-              }
-              try {
-                await this.mkdir({
-                  path: to,
-                  directory: toDirectory,
-                  recursive: false
-                });
-                if (doRename) {
-                  await updateTime(to, ctime, fromObj.mtime);
-                }
-              } catch (e) {
-              }
-              const contents = (await this.readdir({
-                path: from,
-                directory: fromDirectory
-              })).files;
-              for (const filename of contents) {
-                await this._copy({
-                  from: `${from}/${filename.name}`,
-                  to: `${to}/${filename.name}`,
-                  directory: fromDirectory,
-                  toDirectory
-                }, doRename);
-              }
-              if (doRename) {
-                await this.rmdir({
-                  path: from,
-                  directory: fromDirectory
-                });
-              }
-            }
-          }
-          return {
-            uri: toPath
-          };
-        }
-        isBase64String(str) {
-          try {
-            return btoa(atob(str)) == str;
-          } catch (err) {
-            return false;
-          }
-        }
-      };
-      FilesystemWeb._debug = true;
-    }
-  });
-
-  // node_modules/@capacitor/preferences/dist/esm/web.js
-  var web_exports2 = {};
-  __export(web_exports2, {
-    PreferencesWeb: () => PreferencesWeb
-  });
-  var PreferencesWeb;
-  var init_web2 = __esm({
-    "node_modules/@capacitor/preferences/dist/esm/web.js"() {
-      init_dist();
-      PreferencesWeb = class extends WebPlugin {
-        constructor() {
-          super(...arguments);
-          this.group = "CapacitorStorage";
-        }
-        async configure({ group }) {
-          if (typeof group === "string") {
-            this.group = group;
-          }
-        }
-        async get(options) {
-          const value = this.impl.getItem(this.applyPrefix(options.key));
-          return { value };
-        }
-        async set(options) {
-          this.impl.setItem(this.applyPrefix(options.key), options.value);
-        }
-        async remove(options) {
-          this.impl.removeItem(this.applyPrefix(options.key));
-        }
-        async keys() {
-          const keys = this.rawKeys().map((k) => k.substring(this.prefix.length));
-          return { keys };
-        }
-        async clear() {
-          for (const key of this.rawKeys()) {
-            this.impl.removeItem(key);
-          }
-        }
-        async migrate() {
-          var _a;
-          const migrated = [];
-          const existing = [];
-          const oldprefix = "_cap_";
-          const keys = Object.keys(this.impl).filter((k) => k.indexOf(oldprefix) === 0);
-          for (const oldkey of keys) {
-            const key = oldkey.substring(oldprefix.length);
-            const value = (_a = this.impl.getItem(oldkey)) !== null && _a !== void 0 ? _a : "";
-            const { value: currentValue } = await this.get({ key });
-            if (typeof currentValue === "string") {
-              existing.push(key);
-            } else {
-              await this.set({ key, value });
-              migrated.push(key);
-            }
-          }
-          return { migrated, existing };
-        }
-        async removeOld() {
-          const oldprefix = "_cap_";
-          const keys = Object.keys(this.impl).filter((k) => k.indexOf(oldprefix) === 0);
-          for (const oldkey of keys) {
-            this.impl.removeItem(oldkey);
-          }
-        }
-        get impl() {
-          return window.localStorage;
-        }
-        get prefix() {
-          return this.group === "NativeStorage" ? "" : `${this.group}.`;
-        }
-        rawKeys() {
-          return Object.keys(this.impl).filter((k) => k.indexOf(this.prefix) === 0);
-        }
-        applyPrefix(key) {
-          return this.prefix + key;
-        }
-      };
-    }
-  });
-
-  // node_modules/@capacitor/app/dist/esm/web.js
-  var web_exports3 = {};
-  __export(web_exports3, {
-    AppWeb: () => AppWeb
-  });
-  var AppWeb;
-  var init_web3 = __esm({
-    "node_modules/@capacitor/app/dist/esm/web.js"() {
-      init_dist();
-      AppWeb = class extends WebPlugin {
-        constructor() {
-          super();
-          this.handleVisibilityChange = () => {
-            const data = {
-              isActive: document.hidden !== true
-            };
-            this.notifyListeners("appStateChange", data);
-            if (document.hidden) {
-              this.notifyListeners("pause", null);
-            } else {
-              this.notifyListeners("resume", null);
-            }
-          };
-          document.addEventListener("visibilitychange", this.handleVisibilityChange, false);
-        }
-        exitApp() {
-          throw this.unimplemented("Not implemented on web.");
-        }
-        async getInfo() {
-          throw this.unimplemented("Not implemented on web.");
-        }
-        async getLaunchUrl() {
-          return { url: "" };
-        }
-        async getState() {
-          return { isActive: document.hidden !== true };
-        }
-        async minimizeApp() {
-          throw this.unimplemented("Not implemented on web.");
-        }
-        async toggleBackButtonHandler() {
-          throw this.unimplemented("Not implemented on web.");
-        }
-        async getAppLanguage() {
-          return {
-            value: navigator.language.split("-")[0].toLowerCase()
-          };
-        }
-      };
-    }
-  });
-
-  // ../dist/core.mjs
-  function validate(b) {
-    if (b.schema_version !== 1 || !Array.isArray(b.stocks) || !b.stocks.length) throw Error("\u9700\u8981 schema_version=1 \u4E14 stocks \u4E0D\u53EF\u70BA\u7A7A\u3002");
+  // dist/core.mjs
+  function validate(b, { allowEmpty = false } = {}) {
+    if (!b || b.schema_version !== 1 || !Array.isArray(b.stocks) || !b.stocks.length && !allowEmpty) throw Error("\u9700\u8981 schema_version=1 \u4E14 stocks \u4E0D\u53EF\u70BA\u7A7A\u3002");
     if (b.stocks.length > 500) throw Error("\u7DB2\u9801\u7248\u4E00\u6B21\u6700\u591A 500 \u6A94\u3002");
     let ids = /* @__PURE__ */ new Set();
-    for (const s2 of b.stocks) {
-      if (typeof s2.id !== "string" || ids.has(s2.id) || !s2.bars?.length) throw Error("\u80A1\u7968\u4EE3\u865F\u4E0D\u53EF\u91CD\u8907\uFF0C\u4E14\u9700\u6709\u80A1\u50F9\u8CC7\u6599\u3002");
-      ids.add(s2.id);
+    for (const s of b.stocks) {
+      if (typeof s.id !== "string" || ids.has(s.id) || !s.bars?.length) throw Error("\u80A1\u7968\u4EE3\u865F\u4E0D\u53EF\u91CD\u8907\uFF0C\u4E14\u9700\u6709\u80A1\u50F9\u8CC7\u6599\u3002");
+      ids.add(s.id);
       let last = "";
-      for (const r of s2.bars) {
+      for (const r of s.bars) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date) || !Number.isFinite(Date.parse(r.date)) || r.date <= last) throw Error("\u65E5\u671F\u9700\u6392\u5E8F\u4E14\u4E0D\u91CD\u8907\u3002");
         last = r.date;
-        if (!["open", "high", "low", "close", "volume"].every((k) => isNum(r[k])) || Math.min(r.open, r.high, r.low, r.close) <= 0 || r.volume < 0 || r.low > Math.min(r.open, r.close) || r.high < Math.max(r.open, r.close)) throw Error("OHLC \u6216\u6210\u4EA4\u91CF\u683C\u5F0F\u4E0D\u6B63\u78BA\u3002");
+        const issue = barIssue(r);
+        if (issue) throw Error(`${s.id} ${r.date}\uFF1A${issue}\u3002`);
         for (const k of ["trust", "foreign", "dealer", "foreign_dealer", "adj_factor"]) if (r[k] != null && (!isNum(r[k]) || k === "adj_factor" && r[k] <= 0)) throw Error("\u6CD5\u4EBA\u6578\u503C\u6216\u9084\u539F\u56E0\u5B50\u4E0D\u6B63\u78BA\u3002");
       }
       const dates = /* @__PURE__ */ new Set();
-      for (const f2 of s2.financials || []) {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(f2.date) || dates.has(f2.date)) throw Error("\u8CA1\u5831\u65E5\u671F\u932F\u8AA4\u6216\u91CD\u8907\u3002");
-        dates.add(f2.date);
-        for (const k of ["revenue", "gross_profit", "operating_income", "net_income", "eps"]) if (f2[k] != null && !isNum(f2[k])) throw Error("\u8CA1\u5831\u6578\u503C\u683C\u5F0F\u4E0D\u6B63\u78BA\u3002");
+      for (const f of s.financials || []) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date) || dates.has(f.date)) throw Error("\u8CA1\u5831\u65E5\u671F\u932F\u8AA4\u6216\u91CD\u8907\u3002");
+        dates.add(f.date);
+        for (const k of ["revenue", "gross_profit", "operating_income", "net_income", "eps"]) if (f[k] != null && !isNum(f[k])) throw Error("\u8CA1\u5831\u6578\u503C\u683C\u5F0F\u4E0D\u6B63\u78BA\u3002");
       }
     }
     return b;
+  }
+  function numeric(value) {
+    if (isNum(value)) return value;
+    if (typeof value !== "string" || !value.trim()) return null;
+    const text = value.trim();
+    if (!/^[+-]?(?:\d+(?:\.\d+)?|\d{1,3}(?:,\d{3})+(?:\.\d+)?)$/.test(text)) return null;
+    const result = Number(text.replaceAll(",", ""));
+    return Number.isFinite(result) ? result : null;
+  }
+  function barIssue(r) {
+    const names = { open: "\u958B\u76E4\u50F9", high: "\u6700\u9AD8\u50F9", low: "\u6700\u4F4E\u50F9", close: "\u6536\u76E4\u50F9", volume: "\u6210\u4EA4\u91CF" };
+    for (const k of Object.keys(names)) if (!isNum(r[k])) return `${names[k]}\u7F3A\u503C\u6216\u4E0D\u662F\u6709\u6548\u6578\u5B57`;
+    if (Math.min(r.open, r.high, r.low, r.close) <= 0) return "\u958B\u9AD8\u4F4E\u6536\u5FC5\u9808\u5927\u65BC\u96F6";
+    if (r.volume < 0) return "\u6210\u4EA4\u91CF\u4E0D\u53EF\u70BA\u8CA0\u6578";
+    if (r.low > Math.min(r.open, r.close) || r.high < Math.max(r.open, r.close)) return "\u6700\u9AD8\uFF0F\u6700\u4F4E\u50F9\u8207\u958B\u76E4\uFF0F\u6536\u76E4\u50F9\u4E0D\u4E00\u81F4";
+    return "";
+  }
+  function prepareBundle(raw) {
+    if (!raw || raw.schema_version !== 1 || !Array.isArray(raw.stocks)) return validate(raw);
+    const warnings = [...Array.isArray(raw.warnings) ? raw.warnings : []], issues = [];
+    const stocks = raw.stocks.map((stock) => {
+      if (!Array.isArray(stock.bars) || !stock.bars.length) throw Error(`${stock.id || "\u6B64\u80A1\u7968"} \u6C92\u6709\u53EF\u7528\u884C\u60C5\u8CC7\u6599\u3002`);
+      const bars = [];
+      const rejected = [];
+      for (const row of stock.bars) {
+        if (!row || typeof row !== "object") throw Error(`${stock.id} \u884C\u60C5\u5217\u683C\u5F0F\u4E0D\u6B63\u78BA\u3002`);
+        const bar = { ...row };
+        for (const k of ["open", "high", "low", "close", "volume", "trust", "foreign", "dealer", "foreign_dealer", "adj_factor", "pe", "pb", "dividend_yield"]) if (k in bar) bar[k] = numeric(bar[k]);
+        const issue = barIssue(bar);
+        if (issue) {
+          rejected.push(`${stock.id} ${row.date || "\u65E5\u671F\u672A\u63D0\u4F9B"}\uFF1A${issue}`);
+          continue;
+        }
+        bars.push(bar);
+      }
+      if (!bars.length) throw Error(`${stock.id} \u5C1A\u672A\u8F09\u5165\u771F\u5BE6\u8CC7\u6599\uFF1A\u5168\u90E8 ${rejected.length} \u7B46\u884C\u60C5\u7121\u6548\u3002${rejected[0] || ""}`);
+      issues.push(...rejected);
+      return { ...stock, bars };
+    });
+    if (issues.length) warnings.push(`\u5DF2\u6392\u9664 ${issues.length} \u7B46\u7570\u5E38\u884C\u60C5\uFF0C\u6C92\u6709\u88DC\u9020\u50F9\u683C\u6216\u6210\u4EA4\u91CF\uFF1B\u7D71\u8A08\u8207\u56DE\u6E2C\u53EF\u80FD\u53D7\u8CC7\u6599\u7F3A\u53E3\u5F71\u97FF\u3002`, ...issues.slice(0, 30));
+    return validate({ ...raw, stocks, warnings: [...new Set(warnings)] }, { allowEmpty: true });
   }
   function indicators(bs) {
     let e12 = null, e26 = null, dea = null, k = 50, d = 50;
@@ -1294,55 +92,6 @@
       }
       return row;
     });
-  }
-  function bigDataAnalysis(stock, threshold = 5) {
-    const bs = stock.bars, n = bs.length;
-    const sma = (i, w, key = "close") => i >= w - 1 ? bs.slice(i - w + 1, i + 1).reduce((a, x) => a + x[key], 0) / w : null;
-    const rsi = Array(n).fill(null);
-    let gain = 0, loss = 0;
-    for (let i = 1; i < n; i++) {
-      const ch = bs[i].close - bs[i - 1].close, g = Math.max(ch, 0), l = Math.max(-ch, 0);
-      if (i <= 14) { gain += g; loss += l; if (i === 14) rsi[i] = loss === 0 ? 100 : 100 - 100 / (1 + gain / loss); }
-      else { gain = (gain * 13 + g) / 14; loss = (loss * 13 + l) / 14; rsi[i] = loss === 0 ? 100 : 100 - 100 / (1 + gain / loss); }
-    }
-    const inds = indicators(bs);
-    const stateAt = (i) => {
-      const ma20 = sma(i,20), ma60 = sma(i,60), vol20 = sma(i,20,"volume");
-      const prev20 = i >= 20 ? Math.max(...bs.slice(i - 20, i).map(x => x.high)) : null;
-      const ins = (isNum(bs[i].trust) ? bs[i].trust : 0) + (isNum(bs[i].foreign) ? bs[i].foreign : 0);
-      return [
-        {key:"above_ma20", label:"股價站上 20 日均線", on:isNum(ma20) && bs[i].close > ma20},
-        {key:"ma20_above_ma60", label:"20 日均線高於 60 日均線", on:isNum(ma20) && isNum(ma60) && ma20 > ma60},
-        {key:"macd_positive", label:"MACD 動能偏多（DIF > DEA）", on:isNum(inds[i]?.dif) && isNum(inds[i]?.dea) && inds[i].dif > inds[i].dea},
-        {key:"volume_expand", label:"成交量高於 20 日均量 10%", on:isNum(vol20) && bs[i].volume > vol20 * 1.1},
-        {key:"breakout20", label:"收盤突破前 20 日最高價", on:isNum(prev20) && bs[i].close > prev20},
-        {key:"institutional_buy", label:"外資＋投信當日合計買超", on:isNum(bs[i].trust) && isNum(bs[i].foreign) && ins > 0},
-        {key:"rsi_zone", label:"RSI(14) 位於 50–75 多頭區", on:isNum(rsi[i]) && rsi[i] >= 50 && rsi[i] <= 75}
-      ];
-    };
-    if (n < 81) return {conditions:[], score:0, matches:[], horizons:[], insufficient:true, reason:"至少需要約 81 筆日資料才能建立 60 日均線與歷史樣本。"};
-    const current = stateAt(n - 1), currentOn = current.filter(x => x.on).map(x => x.key), score = currentOn.length;
-    const horizons = [5,10,20,60], matches = [];
-    for (let i = 60; i < n - 5; i++) {
-      const s = stateAt(i);
-      const same = s.reduce((a,x) => a + (x.on === current.find(c=>c.key===x.key).on ? 1 : 0), 0);
-      const bullishSame = s.reduce((a,x) => a + (x.on && current.find(c=>c.key===x.key).on ? 1 : 0), 0);
-      if (same >= threshold && bullishSame >= Math.max(2, currentOn.length - 3)) matches.push({i,date:bs[i].date,close:bs[i].close,same,bullishSame});
-    }
-    const stats = horizons.map(h => {
-      const rows = matches.filter(m => m.i + h < n).map(m => {
-        const ret = bs[m.i+h].close / bs[m.i].close - 1;
-        const path = bs.slice(m.i+1, m.i+h+1).map(x => x.close / bs[m.i].close - 1);
-        return {date:m.date, ret, mae:path.length ? Math.min(...path) : null, mfe:path.length ? Math.max(...path) : null};
-      });
-      const rets=rows.map(x=>x.ret).sort((a,b)=>a-b), avg = rets.length ? rets.reduce((a,x)=>a+x,0)/rets.length : null;
-      const median = rets.length ? (rets.length%2 ? rets[(rets.length-1)/2] : (rets[rets.length/2-1]+rets[rets.length/2])/2) : null;
-      const positives = rets.filter(x=>x>0), negatives=rets.filter(x=>x<=0);
-      const avgWin = positives.length ? positives.reduce((a,x)=>a+x,0)/positives.length : null;
-      const avgLoss = negatives.length ? negatives.reduce((a,x)=>a+x,0)/negatives.length : null;
-      return {days:h,count:rows.length,up_rate:rets.length ? positives.length/rets.length:null,mean:avg,median,best:rets.at(-1)??null,worst:rets[0]??null,avg_win:avgWin,avg_loss:avgLoss,payoff:isNum(avgWin)&&isNum(avgLoss)&&avgLoss!==0?avgWin/Math.abs(avgLoss):null,avg_mae:rows.length?rows.reduce((a,x)=>a+(x.mae??0),0)/rows.length:null,avg_mfe:rows.length?rows.reduce((a,x)=>a+(x.mfe??0),0)/rows.length:null,rows};
-    });
-    return {conditions:current,score,matches,horizons:stats,insufficient:false};
   }
   function backtest(stock, p = {}) {
     p = { streak: 3, hold: 5, foreign: false, fee: 1425e-6, tax: 3e-3, slippage: 1e-3, start: null, end: null, adjusted: true, ...p };
@@ -1391,41 +140,41 @@
     return { stock_id: stock.id, trades, curve, count: trades.length, win_rate: rets.length ? rets.filter((x) => x > 0).length / rets.length : null, mean_return: rets.length ? rets.reduce((a, x) => a + x, 0) / rets.length : null, total_return: curve.length ? curve.at(-1).equity - 1 : 0, max_drawdown: dd, benchmark_return: benchmark, adjusted: useAdj, skipped_untradable: skipped, open_positions: pos ? 1 : 0, parameters: p };
   }
   function flows(stocks, window2 = 5, investor = "all") {
-    const calendar = [...new Set(stocks.flatMap((s2) => s2.bars.map((b) => b.date)))].sort().slice(-2 * window2);
+    const calendar = [...new Set(stocks.flatMap((s) => s.bars.map((b) => b.date)))].sort().slice(-2 * window2);
     if (calendar.length < 2 * window2) return { rows: [], included: 0, excluded: stocks.length, dates: calendar };
     let curr = new Set(calendar.slice(window2)), all = new Set(calendar), groups = /* @__PURE__ */ new Map(), excluded = 0;
-    for (const s2 of stocks) {
-      let bs = s2.bars.filter((b) => all.has(b.date)), keys = investor === "all" ? ["trust", "foreign", "dealer", "foreign_dealer"] : [investor];
+    for (const s of stocks) {
+      let bs = s.bars.filter((b) => all.has(b.date)), keys = investor === "all" ? ["trust", "foreign", "dealer", "foreign_dealer"] : [investor];
       if (bs.length !== 2 * window2 || bs.some((b) => keys.some((k) => !isNum(b[k])))) {
         excluded++;
         continue;
       }
-      let name = s2.sector || "\u672A\u5206\u985E";
+      let name = s.sector || "\u672A\u5206\u985E";
       if (!groups.has(name)) groups.set(name, { sector: name, current: 0, previous: 0, count: 0 });
       let g = groups.get(name);
       g.count++;
       for (const b of bs) g[curr.has(b.date) ? "current" : "previous"] += keys.reduce((a, k) => a + b[k], 0) * b.close;
     }
     let rows = [...groups.values()].map((g) => {
-      let delta = g.current - g.previous, f2 = g.current;
-      return { ...g, delta, quadrant: f2 === 0 || delta === 0 ? "\u6301\u5E73" : f2 > 0 ? delta > 0 ? "\u52A0\u901F\u6D41\u5165" : "\u6D41\u5165\u653E\u7DE9" : delta < 0 ? "\u52A0\u901F\u6D41\u51FA" : "\u6D41\u51FA\u653E\u7DE9" };
+      let delta = g.current - g.previous, f = g.current;
+      return { ...g, delta, quadrant: f === 0 || delta === 0 ? "\u6301\u5E73" : f > 0 ? delta > 0 ? "\u52A0\u901F\u6D41\u5165" : "\u6D41\u5165\u653E\u7DE9" : delta < 0 ? "\u52A0\u901F\u6D41\u51FA" : "\u6D41\u51FA\u653E\u7DE9" };
     }).sort((a, b) => b.current - a.current);
     return { rows, included: rows.reduce((a, x) => a + x.count, 0), excluded, dates: calendar };
   }
   function dcf(a) {
     const { fcf, growth, wacc, terminal, net_debt, shares } = a, years = 5;
     if (!Object.values(a).every(isNum) || fcf <= 0 || shares <= 0 || wacc <= terminal || wacc <= 0 || growth <= -1 || terminal <= -1) throw Error("FCFF\u3001\u80A1\u6578\u9700\u5927\u65BC 0\uFF0C\u6298\u73FE\u7387\u9700\u5927\u65BC\u6C38\u7E8C\u6210\u9577\u7387\u4E14\u70BA\u6B63\u3002");
-    let forecast = Array.from({ length: years }, (_, i) => fcf * (1 + growth) ** (i + 1)), pv = forecast.reduce((s2, v, i) => s2 + v / (1 + wacc) ** (i + 1), 0), tv = forecast.at(-1) * (1 + terminal) / (wacc - terminal) / (1 + wacc) ** years;
+    let forecast = Array.from({ length: years }, (_, i) => fcf * (1 + growth) ** (i + 1)), pv = forecast.reduce((s, v, i) => s + v / (1 + wacc) ** (i + 1), 0), tv = forecast.at(-1) * (1 + terminal) / (wacc - terminal) / (1 + wacc) ** years;
     return { price: (pv + tv - net_debt) / shares, enterprise_value: pv + tv, forecast, terminal_pv: tv, assumptions: { ...a, years } };
   }
   var isNum;
   var init_core = __esm({
-    "../dist/core.mjs"() {
+    "dist/core.mjs"() {
       isNum = (v) => typeof v === "number" && Number.isFinite(v);
     }
   });
 
-  // ../dist/app.js
+  // dist/app.js
   var app_exports = {};
   function showError(e) {
     $("error").hidden = false;
@@ -1438,7 +187,7 @@
     return rows.length ? `<div class="table-wrap"><table><thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((v) => `<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : '<div class="empty">\u9019\u500B\u7BC4\u570D\u6C92\u6709\u8DB3\u5920\u8CC7\u6599\u3002</div>';
   }
   function lineChart(series, labels, { height = 230, min, max, yformat = (v) => fmt(v, 1) } = {}) {
-    let values = series.flatMap((s2) => s2.values.filter(isNum));
+    let values = series.flatMap((s) => s.values.filter(isNum));
     if (!values.length) return '<div class="empty">\u5C1A\u7121\u53EF\u7E6A\u88FD\u7684\u8CC7\u6599\u3002</div>';
     let lo = min ?? Math.min(...values), hi = max ?? Math.max(...values);
     if (lo === hi) {
@@ -1453,9 +202,9 @@
       let v = lo + (hi - lo) * i / 3, yy = y(v);
       svg += `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="#e8eef1"/><text x="${L - 9}" y="${yy + 4}" text-anchor="end" fill="#73878f" font-size="12">${esc(yformat(v))}</text>`;
     }
-    for (const s2 of series) {
+    for (const s of series) {
       let path = "", pen = false;
-      s2.values.forEach((v, i) => {
+      s.values.forEach((v, i) => {
         if (!isNum(v)) {
           pen = false;
           return;
@@ -1463,79 +212,121 @@
         path += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)} `;
         pen = true;
       });
-      svg += `<path d="${path}" fill="none" stroke="${s2.color}" stroke-width="2"/>`;
+      svg += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
     }
     for (const i of [0, Math.floor((labels.length - 1) / 2), labels.length - 1]) svg += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" fill="#73878f" font-size="12">${esc(labels[i] ?? "")}</text>`;
-    return svg + `</svg><div class="legend">${series.map((s2) => `<span style="color:${s2.color};margin-right:16px">\u2501 ${esc(s2.name)}</span>`).join("")}</div>`;
+    return svg + `</svg><div class="legend">${series.map((s) => `<span style="color:${s.color};margin-right:16px">\u2501 ${esc(s.name)}</span>`).join("")}</div>`;
   }
   function candleChart(bs, inds) {
     let w = bs.slice(-60), a = inds.slice(-60), W = 780, H = 265, L = 54, R = 15, T = 12, B = 30, lo = Math.min(...w.map((b) => b.low)), hi = Math.max(...w.map((b) => b.high)), span = hi - lo || 1;
     lo -= span * 0.06;
     hi += span * 0.06;
     let y = (v2) => T + (H - T - B) * (hi - v2) / (hi - lo), step = (W - L - R) / w.length, x = (i) => L + step * (i + 0.5);
-    let s2 = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="\u6700\u8FD1\u516D\u5341\u7B46\u80A1\u50F9 K \u7DDA\u8207\u4E8C\u5341\u65E5\u5747\u7DDA">`;
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="\u6700\u8FD1\u516D\u5341\u7B46\u80A1\u50F9 K \u7DDA\u8207\u4E8C\u5341\u65E5\u5747\u7DDA">`;
     for (let i = 0; i < 5; i++) {
       let v2 = lo + (hi - lo) * i / 4, yy = y(v2);
-      s2 += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#e8eef1"/><text x="${L - 8}" y="${yy + 4}" text-anchor="end" fill="#73878f" font-size="12">${fmt(v2, 0)}</text>`;
+      s += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#e8eef1"/><text x="${L - 8}" y="${yy + 4}" text-anchor="end" fill="#73878f" font-size="12">${fmt(v2, 0)}</text>`;
     }
     w.forEach((b, i) => {
       let c = b.close >= b.open ? "#bf404a" : "#16816a";
-      s2 += `<g><title>${esc(b.date)} \u958B ${b.open} \u9AD8 ${b.high} \u4F4E ${b.low} \u6536 ${b.close}</title><line x1="${x(i)}" x2="${x(i)}" y1="${y(b.high)}" y2="${y(b.low)}" stroke="${c}"/><rect x="${x(i) - step * 0.3}" y="${Math.min(y(b.open), y(b.close))}" width="${step * 0.6}" height="${Math.max(1, Math.abs(y(b.open) - y(b.close)))}" fill="${c}"/></g>`;
+      s += `<g><title>${esc(b.date)} \u958B ${b.open} \u9AD8 ${b.high} \u4F4E ${b.low} \u6536 ${b.close}</title><line x1="${x(i)}" x2="${x(i)}" y1="${y(b.high)}" y2="${y(b.low)}" stroke="${c}"/><rect x="${x(i) - step * 0.3}" y="${Math.min(y(b.open), y(b.close))}" width="${step * 0.6}" height="${Math.max(1, Math.abs(y(b.open) - y(b.close)))}" fill="${c}"/></g>`;
     });
     let path = "";
     a.forEach((b, i) => {
       if (isNum(b.ma20)) path += `${path ? "L" : "M"}${x(i)},${y(b.ma20)} `;
     });
-    s2 += `<path d="${path}" fill="none" stroke="#dba953" stroke-width="1.8"/>`;
-    for (const i of [0, Math.floor(w.length / 2), w.length - 1]) s2 += `<text x="${x(i)}" y="${H - 5}" text-anchor="middle" fill="#73878f" font-size="12">${w[i].date.slice(5)}</text>`;
-    s2 += "</svg>";
+    s += `<path d="${path}" fill="none" stroke="#dba953" stroke-width="1.8"/>`;
+    for (const i of [0, Math.floor(w.length / 2), w.length - 1]) s += `<text x="${x(i)}" y="${H - 5}" text-anchor="middle" fill="#73878f" font-size="12">${w[i].date.slice(5)}</text>`;
+    s += "</svg>";
     let maxVol = Math.max(...w.map((b) => b.volume), 1), v = `<svg viewBox="0 0 ${W} 70" role="img" aria-label="\u6210\u4EA4\u91CF">`;
     w.forEach((b, i) => {
       let h = b.volume / maxVol * 45;
       v += `<rect x="${x(i) - step * 0.3}" y="${55 - h}" width="${step * 0.6}" height="${h}" fill="${b.close >= b.open ? "#d7969b" : "#90c6b9"}"><title>${esc(b.date)} \u6210\u4EA4\u91CF ${fmt(b.volume / 1e3, 0)} \u5F35</title></rect>`;
     });
     $("volume-chart").innerHTML = v + '<text x="5" y="15" fill="#73878f" font-size="12">\u6210\u4EA4\u91CF</text></svg>';
-    return s2;
+    return s;
   }
   function go(p) {
-    if (!["scanner", "overview", "bigdata", "strategy", "flows", "report"].includes(p)) p = "scanner";
+    if (!["scanner", "bigdata", "overview", "strategy", "flows", "report"].includes(p) || !document.getElementById(p)) p = "overview";
     page = p;
     document.querySelectorAll(".page").forEach((e) => e.classList.toggle("active", e.id === p));
     document.querySelectorAll("nav button").forEach((e) => e.classList.toggle("active", e.dataset.page === p));
-    $("page-title").textContent = { scanner: "\u6383\u63CF\u9078\u80A1", overview: "\u500B\u80A1\u7E3D\u89BD", bigdata: "\u5927\u6578\u64DA\u591A\u982D\u6A5F\u7387\u5206\u6790", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[p];
-    const quickChatGPT = $("quick-chatgpt");
-    if (quickChatGPT) quickChatGPT.hidden = p !== "overview";
+    $("page-title").textContent = { scanner: "\u6383\u63CF\u9078\u80A1", bigdata: "\u6B77\u53F2\u76F8\u4F3C\u689D\u4EF6\u5206\u6790", overview: "\u500B\u80A1\u7E3D\u89BD", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[p];
     history.replaceState(null, "", "#" + p);
   }
-  function setBundle(raw) {
-    bundle = validate(raw);
-    stockId = bundle.stocks[0].id;
+  function showLoadState(id, failed = false, detail = "") {
+    $("load-state").hidden = false;
+    document.body.classList.add("real-load-state");
+    $("load-state-title").textContent = failed ? `${id} \u5C1A\u672A\u8F09\u5165\u771F\u5BE6\u8CC7\u6599` : `\u6B63\u5728\u8F09\u5165 ${id} \u7684\u771F\u5BE6\u8CC7\u6599\u2026`;
+    $("load-state-detail").textContent = detail || "\u67E5\u8A62\u5B8C\u6210\u5F8C\uFF0C\u80A1\u7968\u9078\u55AE\u3001\u65E5\u671F\u3001\u5716\u8868\u8207\u5927\u6578\u64DA\u5206\u6790\u6703\u4E00\u8D77\u5207\u63DB\u3002";
+    $("load-state-actions").hidden = !failed;
+    $("return-existing").hidden = !(failed && bundle?.mode === "real" && bundle.stocks.length);
+  }
+  function clearLoadState() {
+    $("load-state").hidden = true;
+    document.body.classList.remove("real-load-state");
+  }
+  function emptyState() {
+    showLoadState("", true, "\u8ACB\u6309\u300C\u91CD\u65B0\u67E5\u8A62\u300D\u6216\u532F\u5165 JSON \u8F09\u5165\u771F\u5BE6\u8CC7\u6599\uFF1B\u4E0D\u6703\u81EA\u52D5\u6539\u7528\u6A21\u64EC\u8CC7\u6599\u3002");
+    $("load-state-title").textContent = "\u5C1A\u672A\u8F09\u5165\u80A1\u7968\u8CC7\u6599";
+    $("return-existing").hidden = true;
+    $("stock").innerHTML = "";
+    $("data-date").textContent = "";
+    $("price-chart").innerHTML = "";
+    $("watchlist").innerHTML = "";
+  }
+  function setBundle(raw, { persist = true } = {}) {
+    const next = prepareBundle(raw);
+    bundle = next;
+    clearLoadState();
+    stockId = bundle.stocks[0]?.id || null;
     results = null;
     dcfResult = null;
     $("dcf-result").innerHTML = "";
     $("fcf").value = "";
     $("shares").value = "";
     $("strategy-output").innerHTML = '<div class="panel empty">\u8ABF\u6574\u4E0A\u65B9\u689D\u4EF6\u5F8C\u57F7\u884C\u56DE\u6E2C\uFF0C\u67E5\u770B\u6BCF\u6A94\u80A1\u7968\u7684\u7D50\u679C\u8207\u9010\u7B46\u4EA4\u6613\u3002</div>';
-    $("stock").innerHTML = bundle.stocks.map((s2) => `<option value="${esc(s2.id)}">${esc(s2.id + " " + (s2.name || s2.id))}</option>`).join("");
-    const dates = bundle.stocks.flatMap((s2) => [s2.bars[0].date, s2.bars.at(-1).date]).sort();
+    $("quality-warning").hidden = !bundle.warnings?.length;
+    $("quality-warning").textContent = bundle.warnings?.length ? `\u8CC7\u6599\u63D0\u9192\uFF1A${bundle.warnings.find((x) => x.startsWith("\u5DF2\u6392\u9664")) || bundle.warnings[0]}\uFF08\u5B8C\u6574\u8AAA\u660E\u8ACB\u958B\u555F\u300C\u8CC7\u6599\u4F86\u6E90\u300D\uFF09` : "";
+    if (!bundle.stocks.length) {
+      emptyState();
+      clearError();
+      if (mobile && persist && bundle.mode === "real") mobile.bundleChanged(bundle).catch(showError);
+      return;
+    }
+    $("stock").innerHTML = bundle.stocks.map((s) => `<option value="${esc(s.id)}">${esc(s.id + " " + (s.name || s.id))}</option>`).join("");
+    const dates = bundle.stocks.flatMap((s) => [s.bars[0].date, s.bars.at(-1).date]).sort();
     $("start").value = dates[0];
     $("end").value = dates.at(-1);
     $("notice").className = "notice" + (bundle.mode === "demo" ? "" : " real");
     $("notice").textContent = bundle.mode === "demo" ? "\u6A21\u64EC\u8CC7\u6599\u6A21\u5F0F\uFF1A\u80A1\u7968\u3001\u80A1\u50F9\u8207\u8CA1\u5831\u5747\u70BA\u865B\u69CB\uFF0C\u53EA\u4F9B\u64CD\u4F5C\u8207\u7A0B\u5F0F\u9A57\u8B49\uFF0C\u4E0D\u80FD\u8996\u70BA\u771F\u5BE6\u6295\u8CC7\u7E3E\u6548\u3002" : `\u5DF2\u8F09\u5165 ${bundle.stocks.length} \u6A94 \xB7 \u4F86\u6E90\uFF1A${bundle.source || "\u4F7F\u7528\u8005\u532F\u5165"} \xB7 \u5404\u80A1\u8CC7\u6599\u65E5\u671F\u53EF\u80FD\u4E0D\u540C\u3002`;
     $("source-detail").textContent = [`\u64F7\u53D6\u6642\u9593\uFF1A${bundle.fetched_at || "\u672A\u63D0\u4F9B"}`, ...bundle.notes || [], ...bundle.warnings || []].join("\n");
+    clearError();
     render();
     renderFlows();
-    clearError();
-    if (mobile) mobile.bundleChanged(bundle).catch(showError);
+    if (mobile && persist) mobile.bundleChanged(bundle).catch(showError);
+  }
+  function renderWatch() {
+    $("watch-toggle").textContent = watch.includes(stockId) ? "\u79FB\u9664\u81EA\u9078" : "\u52A0\u5165\u81EA\u9078";
+    $("watch-toggle").setAttribute("aria-pressed", String(watch.includes(stockId)));
+    const ws = bundle.stocks.filter((x) => watch.includes(x.id));
+    $("watchlist").innerHTML = ws.length ? ws.map((x) => {
+      let b = x.bars.at(-1), p = x.bars.at(-2), v = p ? b.close / p.close - 1 : null;
+      return `<button class="watch-item" data-stock="${esc(x.id)}"><span>${esc(x.name || x.id)}<small>${esc(x.id)}</small></span><span class="watch-price">${fmt(b.close)}<small class="${sign(v)}">${pct(v)}</small></span></button>`;
+    }).join("") : '<p class="empty">\u76EE\u524D\u6C92\u6709\u5DF2\u8F09\u5165\u7684\u81EA\u9078\u80A1\u7968\u3002</p>';
   }
   function render() {
-    const s2 = selected(), b = s2.bars.at(-1), prev = s2.bars.at(-2), change = prev ? b.close / prev.close - 1 : null, inds = indicators(s2.bars);
+    if (!selected()) {
+      emptyState();
+      return;
+    }
+    const s = selected(), b = s.bars.at(-1), prev = s.bars.at(-2), change = prev ? b.close / prev.close - 1 : null, inds = indicators(s.bars);
     $("stock").value = stockId;
-    $("data-date").textContent = `${s2.bars[0].date} \u2014 ${b.date} \xB7 ${s2.bars.length} \u7B46`;
-    $("watch-toggle").textContent = watch.includes(stockId) ? "\u79FB\u9664\u81EA\u9078" : "\u52A0\u5165\u81EA\u9078";
-    $("stock-metrics").innerHTML = metric("\u6536\u76E4\u50F9", fmt(b.close), "\u65B0\u81FA\u5E63 / \u5143") + metric("\u55AE\u65E5\u6F32\u8DCC", pct(change), "\u76F8\u5C0D\u524D\u4E00\u7B46\u6536\u76E4", sign(change)) + metric("\u6210\u4EA4\u91CF", fmt(b.volume / 1e3, 0), "\u5F35 / \u6BCF\u5F35 1,000 \u80A1") + metric("\u672C\u76CA\u6BD4", isNum(b.pe) && b.pe > 0 ? fmt(b.pe) + "x" : "\u2014", s2.sector || "\u672A\u5206\u985E");
-    $("chart-title").textContent = s2.name || s2.id;
-    $("price-chart").innerHTML = candleChart(s2.bars, inds);
+    $("data-date").textContent = `${s.bars[0].date} \u2014 ${b.date} \xB7 ${s.bars.length} \u7B46`;
+    renderWatch();
+    $("stock-metrics").innerHTML = metric("\u6536\u76E4\u50F9", fmt(b.close), "\u65B0\u81FA\u5E63 / \u5143") + metric("\u55AE\u65E5\u6F32\u8DCC", pct(change), "\u76F8\u5C0D\u524D\u4E00\u7B46\u6536\u76E4", sign(change)) + metric("\u6210\u4EA4\u91CF", fmt(b.volume / 1e3, 0), "\u5F35 / \u6BCF\u5F35 1,000 \u80A1") + metric("\u672C\u76CA\u6BD4", isNum(b.pe) && b.pe > 0 ? fmt(b.pe) + "x" : "\u2014", s.sector || "\u672A\u5206\u985E");
+    $("chart-title").textContent = s.name || s.id;
+    $("price-chart").innerHTML = candleChart(s.bars, inds);
     renderIndicator(inds);
     const ws = bundle.stocks.filter((x) => watch.includes(x.id));
     $("watchlist").innerHTML = ws.length ? ws.map((x) => {
@@ -1544,80 +335,9 @@
     }).join("") : '<p class="empty">\u9078\u64C7\u6A19\u7684\u5F8C\u6309\u300C\u52A0\u5165\u81EA\u9078\u300D\uFF0C\u5EFA\u7ACB\u4F60\u7684\u89C0\u5BDF\u6E05\u55AE\u3002</p>';
     $("chip-list").innerHTML = [["\u5916\u8CC7", "foreign"], ["\u6295\u4FE1", "trust"], ["\u81EA\u71DF\u5546", "dealer"]].map(([n, k]) => `<div class="chip-row"><span>${n}</span><b class="${sign(b[k])}">${fmt(isNum(b[k]) ? b[k] / 1e3 : null, 0)}</b></div>`).join("");
     renderPortfolio();
-    renderBigData();
-    renderScanner();
     renderReport();
     if (results) renderResults();
-  }
-  function renderBigData() {
-    const threshold = Number($("similarity-threshold")?.value || 5), minSamples = Number($("minimum-samples")?.value || 30), a = bigDataAnalysis(selected(), threshold);
-    if (a.insufficient) { $("bigdata-current").innerHTML = '<div class="panel empty">'+esc(a.reason)+'</div>'; $("bigdata-horizons").innerHTML=''; $("bigdata-conditions").innerHTML=''; return; }
-    const label = a.score >= 6 ? "條件偏強" : a.score >= 4 ? "條件偏多" : a.score >= 2 ? "多空混合" : "多頭條件偏少";
-    $("bigdata-current").innerHTML = '<div class="metrics">'+metric("目前符合多頭條件", a.score+" / 7", label)+metric("歷史相似日", String(a.matches.length), "依目前條件組合搜尋")+metric("資料長度", String(selected().bars.length), "日線筆數")+metric("最新資料日", selected().bars.at(-1).date, selected().id+" "+(selected().name||""))+'</div>';
-    $("bigdata-summary").textContent = a.matches.length < minSamples ? ("相似樣本 "+a.matches.length+" 次，低於你設定的 "+minSamples+" 次；結果容易受少數事件影響。") : ("相似樣本 "+a.matches.length+" 次；請同時看上漲比例、平均/中位數報酬與最差案例。");
-    $("bigdata-horizons").innerHTML = table(["觀察期","有效樣本","上漲比例","平均報酬","中位數","平均盈虧比","平均期間最大不利變動","最差結果"], a.horizons.map(x=>[x.days+" 日",x.count,pct(x.up_rate),pct(x.mean),pct(x.median),isNum(x.payoff)?fmt(x.payoff,2)+"x":"—",pct(x.avg_mae),pct(x.worst)]));
-    $("bigdata-conditions").innerHTML = '<div class="condition-grid">'+a.conditions.map(x=>'<div class="condition-item '+(x.on?'on':'off')+'"><b>'+(x.on?'✓':'—')+'</b><span>'+esc(x.label)+'</span></div>').join('')+'</div>';
-    $("export-bigdata").onclick = () => csv(stockId+"_bigdata_"+selected().bars.at(-1).date+".csv", ["horizon_days","samples","up_rate","mean_return","median_return","avg_win","avg_loss","payoff_ratio","avg_mae","avg_mfe","worst","best"], a.horizons.map(x=>[x.days,x.count,x.up_rate,x.mean,x.median,x.avg_win,x.avg_loss,x.payoff,x.avg_mae,x.avg_mfe,x.worst,x.best]));
-  }
-  function scannerRows() {
-    const horizon = Number($("scan-horizon")?.value || 20);
-    const threshold = Number($("scan-threshold")?.value || 5);
-    const minSamples = Number($("scan-min-samples")?.value || 30);
-    const minScore = Number($("scan-min-score")?.value || 3);
-    const onlyQualified = !!$("scan-only-qualified")?.checked;
-    const rows = [];
-    for (const stock of bundle.stocks) {
-      const a = bigDataAnalysis(stock, threshold);
-      if (a.insufficient) continue;
-      const h = a.horizons.find(x => x.days === horizon);
-      if (!h || !h.count || a.score < minScore) continue;
-      const qualified = h.count >= minSamples;
-      if (onlyQualified && !qualified) continue;
-      const confidence = h.count >= 100 ? "高" : h.count >= minSamples ? "中" : "低";
-      rows.push({stock,a,h,qualified,confidence});
-    }
-    rows.sort((x,y) => {
-      const ux = isNum(x.h.up_rate) ? x.h.up_rate : -1, uy = isNum(y.h.up_rate) ? y.h.up_rate : -1;
-      if (uy !== ux) return uy - ux;
-      const mx = isNum(x.h.median) ? x.h.median : -99, my = isNum(y.h.median) ? y.h.median : -99;
-      if (my !== mx) return my - mx;
-      return y.h.count - x.h.count;
-    });
-    return {rows,horizon,threshold,minSamples,minScore,onlyQualified};
-  }
-  function renderScanner() {
-    if (!$("scanner-table")) return;
-    const r = scannerRows();
-    const total = bundle.stocks.length, shown = r.rows.length;
-    const qualified = r.rows.filter(x => x.qualified).length;
-    $("scanner-summary").innerHTML = '<div class="metrics">'+metric("已載入股票", String(total), "目前批次資料")+metric("顯示標的", String(shown), "符合目前篩選")+metric("達樣本門檻", String(qualified), "有效樣本 ≥ "+r.minSamples)+metric("觀察期", r.horizon+" 日", "歷史相似條件後")+'</div>';
-    $("scanner-note").textContent = shown ? "依「上漲比例」由高到低排列；同值時再比較中位數報酬與樣本數。這是研究排序，不是買進排名。" : "目前沒有股票符合篩選條件；可降低目前多頭條件或樣本門檻。";
-    if (!shown) { $("scanner-table").innerHTML = '<div class="empty">沒有符合目前條件的標的。</div>'; return; }
-    const rows = r.rows.map((x,i) => [
-      '<span class="scanner-rank">'+(i+1)+'</span>',
-      esc(x.stock.id+' '+(x.stock.name||'')),
-      x.a.score+' / 7',
-      x.h.count,
-      pct(x.h.up_rate),
-      pct(x.h.mean),
-      pct(x.h.median),
-      isNum(x.h.payoff) ? fmt(x.h.payoff,2)+'x' : '—',
-      pct(x.h.avg_mae),
-      '<span class="confidence '+(x.confidence==='高'?'high':x.confidence==='低'?'low':'')+'">'+x.confidence+'</span>',
-      '<button class="scan-open" data-scan-stock="'+esc(x.stock.id)+'">查看</button>'
-    ]);
-    $("scanner-table").innerHTML = table(["#","股票","目前多頭條件","有效樣本","上漲比例","平均報酬","中位數","盈虧比","平均最大不利變動","樣本可信度","詳細"], rows);
-    $("scanner-table").onclick = e => {
-      const b = e.target.closest('[data-scan-stock]');
-      if (!b) return;
-      stockId = b.dataset.scanStock;
-      $("stock").value = stockId;
-      dcfResult = null;
-      $("dcf-result").innerHTML = "";
-      render();
-      go("bigdata");
-    };
-    $("export-scanner").onclick = () => csv("stocklab_scanner_"+r.horizon+"d.csv", ["rank","stock_id","name","current_bullish_conditions","samples","up_rate","mean_return","median_return","payoff_ratio","avg_mae","confidence"], r.rows.map((x,i)=>[i+1,x.stock.id,x.stock.name||"",x.a.score,x.h.count,x.h.up_rate,x.h.mean,x.h.median,x.h.payoff,x.h.avg_mae,x.confidence]));
+    extension?.render();
   }
   function renderIndicator(inds = indicators(selected().bars)) {
     let w = inds.slice(-60), labels = w.map((x) => x.date.slice(5));
@@ -1625,83 +345,13 @@
   }
   function renderPortfolio() {
     let rows = [];
-    for (const s2 of bundle.stocks) {
-      let p = positions[s2.id];
+    for (const s of bundle.stocks) {
+      let p = positions[s.id];
       if (!p || !isNum(p.shares) || !isNum(p.cost) || p.shares <= 0) continue;
-      let b = s2.bars.at(-1), value = p.shares * b.close, pnl = value - p.shares * p.cost;
-      rows.push([esc(s2.id + " " + s2.name), fmt(p.shares, 0), fmt(p.cost), fmt(value, 0), `<span class="${sign(pnl)}">${fmt(pnl, 0)}</span>`, esc(b.date)]);
+      let b = s.bars.at(-1), value = p.shares * b.close, pnl = value - p.shares * p.cost;
+      rows.push([esc(s.id + " " + s.name), fmt(p.shares, 0), fmt(p.cost), fmt(value, 0), `<span class="${sign(pnl)}">${fmt(pnl, 0)}</span>`, esc(b.date)]);
     }
     $("portfolio").innerHTML = rows.length ? table(["\u6A19\u7684", "\u80A1\u6578", "\u6BCF\u80A1\u6210\u672C", "\u5E02\u503C", "\u672A\u5BE6\u73FE\u640D\u76CA\uFF08\u672A\u6263\u8CE3\u51FA\u8CBB\u7A05\uFF09", "\u4F30\u503C\u65E5\u671F"], rows) : '<div class="empty">\u5C1A\u7121\u5DF2\u8F09\u5165\u6A19\u7684\u7684\u6301\u80A1\u8A18\u9304\u3002\u9078\u53D6\u80A1\u7968\u5F8C\u53EF\u8A2D\u5B9A\u80A1\u6578\u8207\u6210\u672C\u3002</div>';
-  }
-  function buildChatGPTPrompt() {
-    const stock = selected();
-    const bars = stock.bars;
-    const latest = bars.at(-1);
-    const prev = bars.at(-2);
-    const inds = indicators(bars);
-    const indNow = inds.at(-1) || {};
-    const avg = (w, key = "close") => bars.length >= w ? bars.slice(-w).reduce((a, x) => a + (isNum(x[key]) ? x[key] : 0), 0) / w : null;
-    const ma20 = avg(20), ma60 = avg(60), ma120 = avg(120), vol20 = avg(20, "volume");
-    const change = prev ? latest.close / prev.close - 1 : null;
-    const bd = bigDataAnalysis(stock, Number($("similarity-threshold")?.value || 5));
-    const fs = [...stock.financials || []].sort((a, b) => a.date.localeCompare(b.date)).slice(-8);
-    const fLines = fs.length ? fs.map(f => {
-      const gross = f.revenue > 0 && isNum(f.gross_profit) ? f.gross_profit / f.revenue : null;
-      const op = f.revenue > 0 && isNum(f.operating_income) ? f.operating_income / f.revenue : null;
-      return `- ${f.date}：營收 ${fmt(isNum(f.revenue) ? f.revenue / 1e8 : null)} 億、毛利率 ${pct(gross)}、營益率 ${pct(op)}、EPS ${fmt(f.eps)}`;
-    }).join("\n") : "- 目前資料沒有財報欄位";
-    const conditionLines = bd.insufficient ? `- ${bd.reason}` : bd.conditions.map(x => `- ${x.on ? "符合" : "未符合"}：${x.label}`).join("\n");
-    const horizonLines = bd.insufficient ? "- 樣本不足" : bd.horizons.map(x => `- ${x.days} 日：有效樣本 ${x.count}、歷史上漲比例 ${pct(x.up_rate)}、平均報酬 ${pct(x.mean)}、中位數 ${pct(x.median)}、盈虧比 ${isNum(x.payoff) ? fmt(x.payoff, 2) + "x" : "—"}、平均最大不利變動 ${pct(x.avg_mae)}`).join("\n");
-    const inst = (key) => isNum(latest[key]) ? fmt(latest[key] / 1e3, 0) + " 張" : "缺值";
-    const prompt = `【分析模式】這是一份完整個股研究，建議使用 ChatGPT 的 High 推理強度。若目前不是 High，請仍完成分析，但優先重視資料查證、交叉驗證與不確定性。\n\n請以台股研究分析師的角度，分析以下股票。請使用繁體中文，並將「已知事實」、「資料推論」、「市場預期」清楚分開。不要把任何單一指標視為保證，也不要只給買進／賣出結論。若需要最新新聞、法說會、產業消息或總體資料，請先上網查證並附來源與日期。\n\n【標的】\n${stock.id} ${stock.name || ""}\n產業：${stock.sector || "未分類"}\n本機資料來源：${bundle.source || "使用者匯入"}\n資料抓取時間：${bundle.fetched_at || "未提供"}\n行情截止日：${latest.date}\n\n【目前行情】\n- 收盤價：${fmt(latest.close)} 元\n- 單日漲跌：${pct(change)}\n- 成交量：${fmt(latest.volume / 1e3, 0)} 張\n- 20 日均量：${isNum(vol20) ? fmt(vol20 / 1e3, 0) + " 張" : "—"}\n- 本益比：${isNum(latest.pe) && latest.pe > 0 ? fmt(latest.pe) + " 倍" : "缺值或非正"}\n\n【技術面】\n- MA20：${fmt(ma20)}\n- MA60：${fmt(ma60)}\n- MA120：${fmt(ma120)}\n- MACD DIF：${fmt(indNow.dif, 3)}\n- MACD DEA：${fmt(indNow.dea, 3)}\n- MACD 柱狀值：${fmt(indNow.macd, 3)}\n- KD K：${fmt(indNow.k, 2)}\n- KD D：${fmt(indNow.d, 2)}\n\n【法人當日買賣超】\n- 外資：${inst("foreign")}\n- 投信：${inst("trust")}\n- 自營商：${inst("dealer")}\n\n【目前 7 項多頭條件】\n${conditionLines}\n\n【歷史相似條件統計】\n${horizonLines}\n\n【近八期財務摘要】\n${fLines}\n\n請依序完成以下分析：\n1. 基本面：營收、獲利率、EPS、估值與產業位置；指出資料不足處。\n2. 技術面：日線／中期趨勢、均線、MACD、KD、量價，提出主要支撐與壓力區。\n3. 籌碼面：解讀外資、投信、自營商目前訊號，但不要把單日法人數據過度解讀。\n4. 大數據：解讀歷史相似條件的樣本數、上漲比例、平均／中位數、盈虧比與最大不利變動，特別提醒樣本偏誤與非預測性。\n5. 市場正在定價什麼：哪些利多／利空可能已反映，哪些可能形成預期差。\n6. 最新新聞與催化因素：搜尋近期重要新聞、法說、月營收、產業報價、政策、匯率等，標示來源與日期。\n7. 建立多頭、中性震盪、空頭三種情境，各自列出成立條件、失效條件與需要觀察的價位／事件。\n8. 列出 5 個主要風險與未來 3～6 個月值得追蹤的催化事件。\n9. 最後做一個簡潔儀表板，分成基本面、技術面、籌碼面、產業面、新聞面、風險，說明目前支持多方與支持空方的證據。\n\n重要：本機提供的是歷史資料摘要，不代表即時行情。請把最新外部資料與本機截止日分開說明。`;
-    return prompt;
-  }
-  async function copyChatGPTPrompt() {
-    const text = buildChatGPTPrompt();
-    try {
-      if (mobile?.copyText) await mobile.copyText(text);
-      else if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
-      else {
-        const ta = document.createElement("textarea");
-        ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
-      }
-      $("mobile-status").textContent = "已複製 ChatGPT 分析內容";
-    } catch (e) { showError("複製失敗：" + (e.message || e)); }
-  }
-  async function shareChatGPTPrompt() {
-    const text = buildChatGPTPrompt();
-    const stock = selected();
-    try {
-      if (mobile?.shareText) await mobile.shareText(`${stock.id} ${stock.name || ""}｜台股研究室分析`, text);
-      else if (navigator.share) await navigator.share({ title: `${stock.id} ${stock.name || ""}｜台股研究室分析`, text });
-      else { await copyChatGPTPrompt(); return; }
-      $("mobile-status").textContent = "已開啟分享選單";
-    } catch (e) {
-      if (e?.name !== "AbortError") showError("分享失敗：" + (e.message || e));
-    }
-  }
-  async function openChatGPTPrompt() {
-    const text = buildChatGPTPrompt();
-    const stock = selected();
-    try {
-      if (mobile?.openChatGPT) {
-        const result = await mobile.openChatGPT(`${stock.id} ${stock.name || ""}｜台股研究室深度分析`, text);
-        if (result?.opened) {
-          $("mobile-status").textContent = "已直接開啟 ChatGPT；建議選擇 High 推理強度後送出";
-          return;
-        }
-      }
-      await shareChatGPTPrompt();
-    } catch (e) {
-      if (e?.name !== "AbortError") {
-        try { await shareChatGPTPrompt(); }
-        catch { showError("無法開啟 ChatGPT：" + (e.message || e)); }
-      }
-    }
-  }
-  function previewChatGPTPrompt() {
-    $("chatgpt-prompt").value = buildChatGPTPrompt();
-    $("chatgpt-dialog").showModal();
   }
   function params() {
     return { streak: Number($("streak").value), hold: Number($("hold").value), foreign: $("foreign").checked, fee: Number($("fee").value) / 100, tax: Number($("tax").value) / 100, slippage: Number($("slippage").value) / 100, start: $("start").value, end: $("end").value, adjusted: $("adjusted").checked };
@@ -1709,7 +359,7 @@
   function run() {
     clearError();
     let p = params();
-    results = bundle.stocks.map((s2) => backtest(s2, p));
+    results = bundle.stocks.map((s) => backtest(s, p));
     renderResults();
     return results.map(({ stock_id, count, win_rate, mean_return, total_return, max_drawdown }) => ({ stock_id, count, win_rate, mean_return, total_return, max_drawdown }));
   }
@@ -1720,30 +370,30 @@
     $("trade-csv").onclick = () => csv(`${stockId}_trades_${bundle.mode === "demo" ? "DEMO" : "data"}.csv`, ["signal_date", "entry_date", "exit_date", "entry_price", "exit_price", "net_return"], r.trades.map((t) => [t.signal_date, t.entry_date, t.exit_date, t.entry_price, t.exit_price, t.return]));
   }
   function renderFlows() {
-    let w = Number($("flow-window").value), f2 = flows(bundle.stocks, w, $("flow-investor").value), W = 900, H = 470, L = 70, R = 35, T = 30, B = 55, xc = (L + W - R) / 2, yc = (T + H - B) / 2, xmax = Math.max(...f2.rows.map((r) => Math.abs(r.current / 1e8)), 1) * 1.3, ymax = Math.max(...f2.rows.map((r) => Math.abs(r.delta / 1e8)), 1) * 1.3;
-    let s2 = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="\u7522\u696D\u8CC7\u91D1\u6D41\u5411\u56DB\u8C61\u9650\u6CE1\u6CE1\u5716"><rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="#f8fafb"/><path d="M${xc},${T}V${H - B}M${L},${yc}H${W - R}" stroke="#9fb3bb" stroke-dasharray="4 4"/>`;
-    for (const [text, x, y, c] of [["\u6D41\u51FA\u653E\u7DE9", L + 15, T + 25, "#79938b"], ["\u52A0\u901F\u6D41\u5165", W - R - 15, T + 25, "#ad6670"], ["\u52A0\u901F\u6D41\u51FA", L + 15, H - B - 18, "#487f6e"], ["\u6D41\u5165\u653E\u7DE9", W - R - 15, H - B - 18, "#b49a78"]]) s2 += `<text x="${x}" y="${y}" text-anchor="${x > xc ? "end" : "start"}" fill="${c}" font-size="17">${text}</text>`;
-    for (const r of f2.rows) {
+    let w = Number($("flow-window").value), f = flows(bundle.stocks, w, $("flow-investor").value), W = 900, H = 470, L = 70, R = 35, T = 30, B = 55, xc = (L + W - R) / 2, yc = (T + H - B) / 2, xmax = Math.max(...f.rows.map((r) => Math.abs(r.current / 1e8)), 1) * 1.3, ymax = Math.max(...f.rows.map((r) => Math.abs(r.delta / 1e8)), 1) * 1.3;
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="\u7522\u696D\u8CC7\u91D1\u6D41\u5411\u56DB\u8C61\u9650\u6CE1\u6CE1\u5716"><rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="#f8fafb"/><path d="M${xc},${T}V${H - B}M${L},${yc}H${W - R}" stroke="#9fb3bb" stroke-dasharray="4 4"/>`;
+    for (const [text, x, y, c] of [["\u6D41\u51FA\u653E\u7DE9", L + 15, T + 25, "#79938b"], ["\u52A0\u901F\u6D41\u5165", W - R - 15, T + 25, "#ad6670"], ["\u52A0\u901F\u6D41\u51FA", L + 15, H - B - 18, "#487f6e"], ["\u6D41\u5165\u653E\u7DE9", W - R - 15, H - B - 18, "#b49a78"]]) s += `<text x="${x}" y="${y}" text-anchor="${x > xc ? "end" : "start"}" fill="${c}" font-size="17">${text}</text>`;
+    for (const r of f.rows) {
       let x = xc + r.current / 1e8 / xmax * (W - L - R) / 2, y = yc - r.delta / 1e8 / ymax * (H - T - B) / 2, rad = 9 + Math.sqrt(Math.abs(r.current) / 1e8 / xmax) * 33, c = r.current > 0 ? "#bb6873" : "#439e88";
-      s2 += `<g><title>${esc(r.sector)}\uFF1A\u672C\u671F ${fmt(r.current / 1e8)} \u5104\uFF0C\u8B8A\u5316 ${fmt(r.delta / 1e8)} \u5104\uFF1B${r.count} \u6A94</title><circle cx="${x}" cy="${y}" r="${rad}" fill="${c}" fill-opacity=".7" stroke="${c}"/><text x="${x}" y="${y - rad - 8}" text-anchor="middle" font-size="13" fill="#314e59">${esc(r.sector)}</text></g>`;
+      s += `<g><title>${esc(r.sector)}\uFF1A\u672C\u671F ${fmt(r.current / 1e8)} \u5104\uFF0C\u8B8A\u5316 ${fmt(r.delta / 1e8)} \u5104\uFF1B${r.count} \u6A94</title><circle cx="${x}" cy="${y}" r="${rad}" fill="${c}" fill-opacity=".7" stroke="${c}"/><text x="${x}" y="${y - rad - 8}" text-anchor="middle" font-size="13" fill="#314e59">${esc(r.sector)}</text></g>`;
     }
     for (let i = -2; i <= 2; i++) {
-      s2 += `<text x="${xc + i / 2 * (W - L - R) / 2}" y="${H - B + 19}" text-anchor="middle" font-size="12" fill="#73878f">${fmt(xmax * i / 2, 1)}</text><text x="${L - 8}" y="${yc - i / 2 * (H - T - B) / 2 + 4}" text-anchor="end" font-size="12" fill="#73878f">${fmt(ymax * i / 2, 1)}</text>`;
+      s += `<text x="${xc + i / 2 * (W - L - R) / 2}" y="${H - B + 19}" text-anchor="middle" font-size="12" fill="#73878f">${fmt(xmax * i / 2, 1)}</text><text x="${L - 8}" y="${yc - i / 2 * (H - T - B) / 2 + 4}" text-anchor="end" font-size="12" fill="#73878f">${fmt(ymax * i / 2, 1)}</text>`;
     }
-    s2 += `<text x="${xc}" y="${H - 4}" text-anchor="middle" fill="#657b84" font-size="13">\u672C\u671F\u4F30\u8A08\u6DE8\u6D41\u91CF\uFF08\u5104\u5143\uFF09</text><text x="18" y="${yc}" transform="rotate(-90 18 ${yc})" text-anchor="middle" fill="#657b84" font-size="13">\u76F8\u8F03\u524D\u671F\u8B8A\u5316\uFF08\u5104\u5143\uFF09</text></svg>`;
-    $("flow-chart").innerHTML = f2.rows.length ? s2 : '<div class="empty">\u5B8C\u6574\u6CD5\u4EBA\u8CC7\u6599\u4E0D\u8DB3\u4EE5\u6BD4\u8F03\u5169\u500B\u5340\u9593\u3002\u8ACB\u589E\u52A0\u6B77\u53F2\u8CC7\u6599\u6216\u66F4\u63DB\u6CD5\u4EBA\u985E\u5225\u3002</div>';
-    $("flow-coverage").textContent = `\u7D0D\u5165 ${f2.included} / ${bundle.stocks.length} \u6A94\uFF1B\u7F3A\u5C11\u5171\u540C\u65E5\u671F\u6216\u6CD5\u4EBA\u6B04\u4F4D\u800C\u6392\u9664 ${f2.excluded} \u6A94\u3002${f2.dates.length >= 2 * w ? `\u524D\u671F ${f2.dates[0]}\u2013${f2.dates[w - 1]}\uFF1B\u672C\u671F ${f2.dates[w]}\u2013${f2.dates.at(-1)}\u3002` : ""}`;
-    $("flow-table").innerHTML = table(["\u7522\u696D", "\u7D0D\u5165\u80A1\u7968", "\u524D\u671F\uFF08\u5104\uFF09", "\u672C\u671F\uFF08\u5104\uFF09", "\u8B8A\u5316\uFF08\u5104\uFF09", "\u8C61\u9650"], f2.rows.map((r) => [esc(r.sector), r.count, fmt(r.previous / 1e8), fmt(r.current / 1e8), fmt(r.delta / 1e8), r.quadrant]));
+    s += `<text x="${xc}" y="${H - 4}" text-anchor="middle" fill="#657b84" font-size="13">\u672C\u671F\u4F30\u8A08\u6DE8\u6D41\u91CF\uFF08\u5104\u5143\uFF09</text><text x="18" y="${yc}" transform="rotate(-90 18 ${yc})" text-anchor="middle" fill="#657b84" font-size="13">\u76F8\u8F03\u524D\u671F\u8B8A\u5316\uFF08\u5104\u5143\uFF09</text></svg>`;
+    $("flow-chart").innerHTML = f.rows.length ? s : '<div class="empty">\u5B8C\u6574\u6CD5\u4EBA\u8CC7\u6599\u4E0D\u8DB3\u4EE5\u6BD4\u8F03\u5169\u500B\u5340\u9593\u3002\u8ACB\u589E\u52A0\u6B77\u53F2\u8CC7\u6599\u6216\u66F4\u63DB\u6CD5\u4EBA\u985E\u5225\u3002</div>';
+    $("flow-coverage").textContent = `\u7D0D\u5165 ${f.included} / ${bundle.stocks.length} \u6A94\uFF1B\u7F3A\u5C11\u5171\u540C\u65E5\u671F\u6216\u6CD5\u4EBA\u6B04\u4F4D\u800C\u6392\u9664 ${f.excluded} \u6A94\u3002${f.dates.length >= 2 * w ? `\u524D\u671F ${f.dates[0]}\u2013${f.dates[w - 1]}\uFF1B\u672C\u671F ${f.dates[w]}\u2013${f.dates.at(-1)}\u3002` : ""}`;
+    $("flow-table").innerHTML = table(["\u7522\u696D", "\u7D0D\u5165\u80A1\u7968", "\u524D\u671F\uFF08\u5104\uFF09", "\u672C\u671F\uFF08\u5104\uFF09", "\u8B8A\u5316\uFF08\u5104\uFF09", "\u8C61\u9650"], f.rows.map((r) => [esc(r.sector), r.count, fmt(r.previous / 1e8), fmt(r.current / 1e8), fmt(r.delta / 1e8), r.quadrant]));
   }
   function renderReport() {
-    const s2 = selected(), fs = [...s2.financials || []].sort((a, b2) => a.date.localeCompare(b2.date)).slice(-8), last = fs.at(-1), bars = s2.bars.slice(-250), b = bars.at(-1);
-    $("report-label").textContent = `${s2.id} ${s2.name || ""} \xB7 ${mode()} \xB7 \u80A1\u50F9\u622A\u81F3 ${b.date}`;
+    const s = selected(), fs = [...s.financials || []].sort((a, b2) => a.date.localeCompare(b2.date)).slice(-8), last = fs.at(-1), bars = s.bars.slice(-250), b = bars.at(-1);
+    $("report-label").textContent = `${s.id} ${s.name || ""} \xB7 ${mode()} \xB7 \u80A1\u50F9\u622A\u81F3 ${b.date}`;
     let gross = last?.revenue > 0 && isNum(last.gross_profit) ? last.gross_profit / last.revenue : null, operating = last?.revenue > 0 && isNum(last.operating_income) ? last.operating_income / last.revenue : null;
-    $("summary").innerHTML = `<div class="summary-grid"><div><small>\u6A19\u7684\u8207\u8CC7\u6599</small>${esc(s2.id + " " + (s2.name || ""))}<br>${esc(mode())}\uFF0C${s2.bars.length} \u7B46\u65E5\u8CC7\u6599</div><div><small>\u6700\u65B0\u8CA1\u5831\u671F\u672B ${esc(last?.date || "\u672A\u63D0\u4F9B")}</small>\u71DF\u6536 ${fmt(isNum(last?.revenue) ? last.revenue / 1e8 : null)} \u5104<br>\u6BDB\u5229\u7387 ${pct(gross)}</div><div><small>\u7372\u5229\u8207\u8A55\u50F9</small>\u71DF\u696D\u5229\u76CA\u7387 ${pct(operating)}<br>\u672C\u76CA\u6BD4 ${isNum(b.pe) && b.pe > 0 ? fmt(b.pe) + " \u500D" : "\u7F3A\u503C\u6216\u975E\u6B63"}</div></div>`;
+    $("summary").innerHTML = `<div class="summary-grid"><div><small>\u6A19\u7684\u8207\u8CC7\u6599</small>${esc(s.id + " " + (s.name || ""))}<br>${esc(mode())}\uFF0C${s.bars.length} \u7B46\u65E5\u8CC7\u6599</div><div><small>\u6700\u65B0\u8CA1\u5831\u671F\u672B ${esc(last?.date || "\u672A\u63D0\u4F9B")}</small>\u71DF\u6536 ${fmt(isNum(last?.revenue) ? last.revenue / 1e8 : null)} \u5104<br>\u6BDB\u5229\u7387 ${pct(gross)}</div><div><small>\u7372\u5229\u8207\u8A55\u50F9</small>\u71DF\u696D\u5229\u76CA\u7387 ${pct(operating)}<br>\u672C\u76CA\u6BD4 ${isNum(b.pe) && b.pe > 0 ? fmt(b.pe) + " \u500D" : "\u7F3A\u503C\u6216\u975E\u6B63"}</div></div>`;
     $("summary").innerHTML += `<p class="caption">\u4F86\u6E90\uFF1A${esc(bundle.source || "\u4F7F\u7528\u8005\u532F\u5165")}\uFF1B\u64F7\u53D6\u6642\u9593\uFF1A${esc(bundle.fetched_at || "\u672A\u63D0\u4F9B")}\uFF1B\u80A1\u50F9\u622A\u81F3 ${esc(b.date)}\u3002</p>`;
-    $("financial-chart").innerHTML = lineChart([{ name: "\u71DF\u6536\uFF08\u5104\uFF09", values: fs.map((f2) => isNum(f2.revenue) ? f2.revenue / 1e8 : null), color: "#218777" }, { name: "\u6BDB\u5229\uFF08\u5104\uFF09", values: fs.map((f2) => isNum(f2.gross_profit) ? f2.gross_profit / 1e8 : null), color: "#d39b42" }, { name: "\u71DF\u696D\u5229\u76CA\uFF08\u5104\uFF09", values: fs.map((f2) => isNum(f2.operating_income) ? f2.operating_income / 1e8 : null), color: "#7886b0" }], fs.map((f2) => f2.date.slice(2)), { height: 235 });
-    $("financial-chart").innerHTML += lineChart([{ name: "\u6BDB\u5229\u7387 (%)", values: fs.map((f2) => f2.revenue > 0 && isNum(f2.gross_profit) ? f2.gross_profit / f2.revenue * 100 : null), color: "#d39b42" }, { name: "\u71DF\u696D\u5229\u76CA\u7387 (%)", values: fs.map((f2) => f2.revenue > 0 && isNum(f2.operating_income) ? f2.operating_income / f2.revenue * 100 : null), color: "#7886b0" }], fs.map((f2) => f2.date.slice(2)), { height: 170, yformat: (v) => fmt(v, 1) + "%" });
-    $("financial-table").innerHTML = table(["\u671F\u672B\u65E5\u671F", "\u71DF\u6536\uFF08\u5104\uFF09", "\u6BDB\u5229\u7387", "\u71DF\u696D\u5229\u76CA\u7387", "\u6DE8\u5229\uFF08\u5104\uFF09", "EPS\uFF08\u5143\uFF09"], fs.map((f2) => [esc(f2.date), fmt(isNum(f2.revenue) ? f2.revenue / 1e8 : null), pct(f2.revenue > 0 && isNum(f2.gross_profit) ? f2.gross_profit / f2.revenue : null), pct(f2.revenue > 0 && isNum(f2.operating_income) ? f2.operating_income / f2.revenue : null), fmt(isNum(f2.net_income) ? f2.net_income / 1e8 : null), fmt(f2.eps)]));
+    $("financial-chart").innerHTML = lineChart([{ name: "\u71DF\u6536\uFF08\u5104\uFF09", values: fs.map((f) => isNum(f.revenue) ? f.revenue / 1e8 : null), color: "#218777" }, { name: "\u6BDB\u5229\uFF08\u5104\uFF09", values: fs.map((f) => isNum(f.gross_profit) ? f.gross_profit / 1e8 : null), color: "#d39b42" }, { name: "\u71DF\u696D\u5229\u76CA\uFF08\u5104\uFF09", values: fs.map((f) => isNum(f.operating_income) ? f.operating_income / 1e8 : null), color: "#7886b0" }], fs.map((f) => f.date.slice(2)), { height: 235 });
+    $("financial-chart").innerHTML += lineChart([{ name: "\u6BDB\u5229\u7387 (%)", values: fs.map((f) => f.revenue > 0 && isNum(f.gross_profit) ? f.gross_profit / f.revenue * 100 : null), color: "#d39b42" }, { name: "\u71DF\u696D\u5229\u76CA\u7387 (%)", values: fs.map((f) => f.revenue > 0 && isNum(f.operating_income) ? f.operating_income / f.revenue * 100 : null), color: "#7886b0" }], fs.map((f) => f.date.slice(2)), { height: 170, yformat: (v) => fmt(v, 1) + "%" });
+    $("financial-table").innerHTML = table(["\u671F\u672B\u65E5\u671F", "\u71DF\u6536\uFF08\u5104\uFF09", "\u6BDB\u5229\u7387", "\u71DF\u696D\u5229\u76CA\u7387", "\u6DE8\u5229\uFF08\u5104\uFF09", "EPS\uFF08\u5143\uFF09"], fs.map((f) => [esc(f.date), fmt(isNum(f.revenue) ? f.revenue / 1e8 : null), pct(f.revenue > 0 && isNum(f.gross_profit) ? f.gross_profit / f.revenue : null), pct(f.revenue > 0 && isNum(f.operating_income) ? f.operating_income / f.revenue : null), fmt(isNum(f.net_income) ? f.net_income / 1e8 : null), fmt(f.eps)]));
     $("pe-chart").innerHTML = bars.some((x) => isNum(x.pe) && x.pe > 0) ? lineChart([...[[12, "#b8caca"], [16, "#83b7ac"], [20, "#c7af70"], [24, "#b38a9e"]].map(([n, c]) => ({ name: n + "\u500D", color: c, values: bars.map((x) => isNum(x.pe) && x.pe > 0 ? x.close / x.pe * n : null) })), { name: "\u6536\u76E4", color: "#203c49", values: bars.map((x) => x.close) }], bars.map((x) => x.date.slice(5)), { height: 235 }) : '<div class="empty">\u7F3A\u5C11\u6709\u6548\u6B63\u672C\u76CA\u6BD4\uFF0C\u7121\u6CD5\u8A08\u7B97\u8A55\u50F9\u5340\u9593\u3002</div>';
   }
   function reportPayload() {
@@ -1773,10 +423,10 @@
   async function detectRuntime() {
     if (mobile) return;
     if (location.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(location.hostname)) {
-      $("runtime-label").textContent = "v0.6.4 · PWA / Web · Big Data";
+      $("runtime-label").textContent = "\u7DB2\u9801\u7248 \xB7 v1.0.2";
       return;
     }
-    $("runtime-label").textContent = "v0.6.4 · 正在連接本機…";
+    $("runtime-label").textContent = "\u6B63\u5728\u9023\u63A5\u672C\u6A5F\u2026";
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 7e3);
     try {
       const r = await fetch("/api/health", { cache: "no-store", signal: controller.signal });
@@ -1786,13 +436,13 @@
       if (v.app !== "taiwan-stock-lab") throw Error("\u9023\u5230\u5176\u4ED6\u7A0B\u5F0F\uFF0C\u8ACB\u6AA2\u67E5\u555F\u52D5\u7DB2\u5740\u3002");
       if (v.version !== "1.0.2") throw Error(`\u76EE\u524D\u4F3A\u670D\u5668\u70BA ${v.version || "\u820A\u7248"}\u3002\u8ACB\u505C\u6B62\u820A\u7A0B\u5F0F\uFF0C\u518D\u5F9E v1.0.2 \u8CC7\u6599\u593E\u555F\u52D5\u3002`);
       local = true;
-      $("runtime-label").textContent = "v0.6.4 · 本機 Python · v1.0.2";
+      $("runtime-label").textContent = "\u672C\u6A5F Python \xB7 v1.0.2";
       $("fetch-form").hidden = false;
       $("fetch-instruction").textContent = "\u5DF2\u9023\u63A5\u672C\u6A5F\u7A0B\u5F0F\u3002\u8F38\u5165\u80A1\u7968\u4EE3\u865F\u8207\u65E5\u671F\uFF0C\u6309\u300C\u6293\u53D6\u4E26\u8F09\u5165\u300D\u9023\u7DDA FinMind\uFF1B\u76EE\u524D\u70BA\u65E5\u8CC7\u6599\uFF0C\u975E\u5373\u6642\u884C\u60C5\u3002";
       document.querySelectorAll(".local-only").forEach((e) => e.hidden = false);
     } catch (e) {
       const message = e.name === "AbortError" ? "\u672C\u6A5F\u9023\u7DDA\u8D85\u904E 7 \u79D2\u3002\u8ACB\u78BA\u8A8D\u7D42\u7AEF\u6A5F\u4ECD\u5728\u57F7\u884C\u65B0\u7248 stocklab.py\u3002" : e.message;
-      $("runtime-label").textContent = "v0.6.4 · 本機連線失敗";
+      $("runtime-label").textContent = "\u672C\u6A5F\u9023\u7DDA\u5931\u6557";
       $("fetch-instruction").textContent = message;
       showError("\u672C\u6A5F\u9023\u7DDA\u5931\u6557\uFF1A" + message);
     } finally {
@@ -1802,15 +452,14 @@
   async function init() {
     const runtime = detectRuntime();
     try {
-      if (mobile?.restoredBundle) {
-        setBundle(mobile.restoredBundle);
-        window.stocklabStartup.ready();
-      } else {
-        loadDemo();
-      }
-      go(location.hash.slice(1) || "scanner");
+      setBundle(mobile?.restoredBundle || { schema_version: 1, mode: "real", stocks: [] }, { persist: false });
+      window.stocklabStartup.ready();
+      go(location.hash.slice(1) || (document.getElementById("scanner") ? "scanner" : "overview"));
     } catch (e) {
-      window.stocklabStartup.fail(e.message);
+      bundle = { schema_version: 1, mode: "real", stocks: [] };
+      emptyState();
+      window.stocklabStartup.ready();
+      showError(e);
     }
     if (mobile) mobile.ready();
     await runtime;
@@ -1832,31 +481,36 @@
       }
     }
   }
-  var $, esc, fmt, pct, sign, mobile, bundle, stockId, ind, page, local, results, dcfResult, readLocal, writeLocal, watch, positions, selected, mode, metric, download, csv;
+  var $, esc, fmt, pct, sign, mobile, bundle, stockId, ind, page, local, results, dcfResult, readLocal, writeLocal, watch, positions, selected, mode, metric, download, csv, removalTarget, extension;
   var init_app = __esm({
-    "../dist/app.js"() {
+    "dist/app.js"() {
       init_core();
+      if (!document.getElementById("load-state")) document.getElementById("error").insertAdjacentHTML("afterend", '<section id="load-state" class="panel load-state" role="status" hidden><h2 id="load-state-title"></h2><p id="load-state-detail"></p><div id="load-state-actions" class="actions" hidden><button id="retry-query" type="button">\u91CD\u65B0\u67E5\u8A62</button><button id="change-stock" type="button">\u91CD\u65B0\u8F38\u5165\u80A1\u7968\u4EE3\u865F</button><button id="return-demo" type="button">\u6A21\u64EC\u8CC7\u6599\u6A21\u5F0F</button></div></section>');
+      document.getElementById("load-state-actions").insertAdjacentHTML("beforeend", '<button id="return-existing" type="button" hidden>\u8FD4\u56DE\u4E0A\u6B21\u5DF2\u8F09\u5165\u8CC7\u6599</button>');
+      document.getElementById("notice").insertAdjacentHTML("afterend", '<p id="quality-warning" class="notice" role="status" hidden></p><p id="action-status" class="caption" role="status" aria-live="polite"></p>');
+      document.getElementById("watch-toggle").insertAdjacentHTML("afterend", '<button id="remove-stock" type="button">\u79FB\u9664\u9019\u6A94\u8CC7\u6599</button>');
+      document.body.insertAdjacentHTML("beforeend", '<dialog id="remove-dialog"><form method="dialog" class="dialog-head"><h2>\u79FB\u9664\u80A1\u7968\u8CC7\u6599</h2><button aria-label="\u95DC\u9589">\u2715</button></form><p id="remove-detail"></p><p>\u53EA\u79FB\u9664\u6B64\u88DD\u7F6E\u7684\u884C\u60C5\u8207\u81EA\u9078\uFF1BToken \u548C\u6301\u80A1\u8A2D\u5B9A\u4FDD\u7559\u3002\u9700\u8981\u5099\u4EFD\u6642\u8ACB\u5148\u532F\u51FA JSON\u3002</p><div class="actions"><button id="confirm-remove-stock" type="button">\u78BA\u8A8D\u79FB\u9664</button><button id="cancel-remove-stock" type="button">\u53D6\u6D88</button></div></dialog>');
       $ = (id) => {
         const el2 = document.getElementById(id);
         if (!el2) throw Error(`\u9801\u9762\u7F3A\u5C11 ${id}\uFF0C\u8ACB\u4F7F\u7528\u5B8C\u6574\u7684 v1.0.2 \u8CC7\u6599\u593E\u3002`);
         return el2;
       };
-      esc = (s2) => String(s2 ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
       fmt = (v, d = 2) => isNum(v) ? v.toLocaleString("zh-TW", { minimumFractionDigits: d, maximumFractionDigits: d }) : "\u2014";
       pct = (v) => isNum(v) ? `${(v * 100).toFixed(2)}%` : "\u2014";
       sign = (v) => isNum(v) ? v > 0 ? "positive" : v < 0 ? "negative" : "" : "";
       mobile = window.StocklabMobile;
       ind = "macd";
-      page = "scanner";
+      page = "overview";
       local = false;
       results = null;
       dcfResult = null;
-      readLocal = (k, f2) => {
-        if (mobile) return mobile.readLocal(k, f2);
+      readLocal = (k, f) => {
+        if (mobile) return mobile.readLocal(k, f);
         try {
-          return JSON.parse(localStorage.getItem(k)) ?? f2;
+          return JSON.parse(localStorage.getItem(k)) ?? f;
         } catch {
-          return f2;
+          return f;
         }
       };
       writeLocal = (k, v) => {
@@ -1871,7 +525,7 @@
       positions = readLocal("twlab.positions", {});
       if (!Array.isArray(watch)) watch = [];
       if (!positions || typeof positions !== "object" || Array.isArray(positions)) positions = {};
-      selected = () => bundle.stocks.find((s2) => s2.id === stockId);
+      selected = () => bundle.stocks.find((s) => s.id === stockId);
       mode = () => bundle.mode === "demo" ? "\u6A21\u64EC\u8CC7\u6599" : "\u532F\u5165\u8CC7\u6599";
       metric = (label, value, small = "", cls = "") => `<div class="metric"><div class="metric-label">${esc(label)}</div><div class="metric-value ${cls}">${value}</div><small>${esc(small)}</small></div>`;
       download = (name, content, type = "application/json") => {
@@ -1895,10 +549,17 @@
         $("shares").value = "";
         render();
       };
-      $("watch-toggle").onclick = () => {
-        watch = watch.includes(stockId) ? watch.filter((x) => x !== stockId) : [...watch, stockId];
-        writeLocal("twlab.watch", watch);
-        render();
+      $("watch-toggle").onclick = async () => {
+        if (!selected()) return;
+        const id = stockId, wasSelected = watch.includes(id);
+        watch = wasSelected ? watch.filter((x) => x !== id) : [...watch, id];
+        renderWatch();
+        $("action-status").textContent = `${id} \u5DF2${wasSelected ? "\u79FB\u51FA" : "\u52A0\u5165"}\u81EA\u9078\u6E05\u55AE\u3002`;
+        try {
+          await writeLocal("twlab.watch", watch);
+        } catch {
+          showError("\u81EA\u9078\u72C0\u614B\u5DF2\u5728\u672C\u6B21\u756B\u9762\u66F4\u65B0\uFF0C\u4F46\u4FDD\u5B58\u5931\u6557\uFF1B\u8ACB\u6AA2\u67E5\u88DD\u7F6E\u7A7A\u9593\u3002");
+        }
       };
       $("watchlist").onclick = (e) => {
         const b = e.target.closest("[data-stock]");
@@ -1909,6 +570,40 @@
           $("fcf").value = "";
           $("shares").value = "";
           render();
+        }
+      };
+      removalTarget = null;
+      $("remove-stock").onclick = () => {
+        if (!selected()) return;
+        removalTarget = stockId;
+        $("remove-detail").textContent = `\u8981\u79FB\u9664 ${stockId} ${selected().name || ""} \u7684\u5DF2\u8F09\u5165\u884C\u60C5\u55CE\uFF1F\u79FB\u9664\u6700\u5F8C\u4E00\u6A94\u5F8C\u6703\u986F\u793A\u7A7A\u767D\u8CC7\u6599\u72C0\u614B\u3002`;
+        $("remove-dialog").showModal();
+      };
+      $("cancel-remove-stock").onclick = () => $("remove-dialog").close();
+      $("confirm-remove-stock").onclick = async () => {
+        const button = $("confirm-remove-stock");
+        button.disabled = true;
+        try {
+          if (!removalTarget || !bundle.stocks.some((s) => s.id === removalTarget)) return;
+          const id = removalTarget, next = { ...bundle, stocks: bundle.stocks.filter((s) => s.id !== id) };
+          if (!next.stocks.length) next.mode = "real";
+          validate(next, { allowEmpty: true });
+          if (mobile && bundle.mode === "real") await mobile.bundleChanged(next);
+          watch = watch.filter((x) => x !== id);
+          setBundle(next, { persist: false });
+          $("remove-dialog").close();
+          $("action-status").textContent = `\u5DF2\u79FB\u9664 ${id} \u7684\u884C\u60C5\u8CC7\u6599\uFF1BToken \u548C\u6301\u80A1\u8A2D\u5B9A\u4FDD\u7559\u3002`;
+          try {
+            await writeLocal("twlab.watch", watch);
+          } catch {
+            showError("\u884C\u60C5\u5DF2\u79FB\u9664\uFF0C\u4F46\u81EA\u9078\u8A2D\u5B9A\u672A\u80FD\u4FDD\u5B58\u3002");
+          }
+        } catch (e) {
+          $("remove-dialog").close();
+          showError(`\u79FB\u9664\u5931\u6557\uFF0C\u539F\u8CC7\u6599\u4ECD\u4FDD\u7559\u3002${e.message}`);
+        } finally {
+          button.disabled = false;
+          removalTarget = null;
         }
       };
       document.querySelectorAll("[data-ind]").forEach((b) => b.onclick = () => {
@@ -1925,8 +620,6 @@
         }
       };
       for (const id of ["flow-window", "flow-investor"]) $(id).onchange = renderFlows;
-      for (const id of ["similarity-threshold", "minimum-samples"]) $(id).onchange = renderBigData;
-      for (const id of ["scan-horizon", "scan-threshold", "scan-min-samples", "scan-min-score", "scan-only-qualified"]) if ($(id)) $(id).onchange = renderScanner;
       for (const el2 of $("strategy-form").querySelectorAll("input")) el2.addEventListener("input", () => {
         if (results) {
           results = null;
@@ -1975,14 +668,6 @@
       };
       $("export-data").onclick = () => download(`stocklab_${bundle.mode === "demo" ? "DEMO" : "market"}.json`, JSON.stringify(bundle, null, 2));
       $("download-report-data").onclick = () => download(`${stockId}_report_input.json`, JSON.stringify(reportPayload(), null, 2));
-      $("quick-chatgpt").onclick = openChatGPTPrompt;
-      $("open-chatgpt").onclick = openChatGPTPrompt;
-      $("preview-chatgpt").onclick = previewChatGPTPrompt;
-      $("copy-chatgpt").onclick = copyChatGPTPrompt;
-      $("share-chatgpt").onclick = shareChatGPTPrompt;
-      $("dialog-open-chatgpt").onclick = openChatGPTPrompt;
-      $("dialog-copy-chatgpt").onclick = copyChatGPTPrompt;
-      $("dialog-share-chatgpt").onclick = shareChatGPTPrompt;
       $("print-report").onclick = () => {
         go("report");
         window.print();
@@ -2008,11 +693,12 @@
       $("fetch-end").value = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       $("fetch-form").onsubmit = async (e) => {
         e.preventDefault();
-        let btn = $("fetch-button");
+        let btn = $("fetch-button"), query = { ids: $("fetch-ids").value.split(/[,，\s]+/).filter(Boolean), start: $("fetch-start").value, end: $("fetch-end").value, token: $("token").value.trim() }, requested = query.ids[0] || "\u6B64\u80A1\u7968";
         btn.disabled = true;
         btn.textContent = "\u6293\u53D6\u4E2D\uFF0C\u6BCF\u6A94\u53EF\u80FD\u9700\u8981\u6578\u5341\u79D2\u2026";
+        showLoadState(requested);
+        $("data-dialog").close();
         try {
-          const query = { ids: $("fetch-ids").value.split(/[,，\s]+/).filter(Boolean), start: $("fetch-start").value, end: $("fetch-end").value, token: $("token").value.trim() };
           let d;
           if (mobile) {
             d = await mobile.fetchMarket(query);
@@ -2022,100 +708,1392 @@
             if (!r.ok) throw Error(d.error || "\u8CC7\u6599\u6293\u53D6\u5931\u6557");
           }
           setBundle(d);
-          $("token").value = "";
-          $("data-dialog").close();
         } catch (err) {
-          $("data-dialog").close();
-          showError(err);
+          const message = err instanceof Error ? err.message : String(err);
+          showLoadState(requested, true, message);
+          showError(message);
         } finally {
           btn.disabled = false;
           btn.textContent = "\u6293\u53D6\u4E26\u8F09\u5165";
         }
       };
+      $("retry-query").onclick = () => {
+        $("data-dialog").showModal();
+        $("fetch-ids").focus();
+      };
+      $("change-stock").onclick = () => {
+        $("data-dialog").showModal();
+        $("fetch-ids").focus();
+        $("fetch-ids").select();
+      };
+      $("return-demo").onclick = () => {
+        loadDemo();
+        clearError();
+      };
+      $("return-existing").onclick = () => {
+        if (bundle?.stocks.length) {
+          clearLoadState();
+          clearError();
+          render();
+          $("action-status").textContent = "\u76EE\u524D\u986F\u793A\u4E0A\u6B21\u5DF2\u8F09\u5165\u8CC7\u6599\uFF0C\u4E0D\u662F\u525B\u624D\u5931\u6557\u67E5\u8A62\u7684\u7D50\u679C\u3002";
+        }
+      };
+      extension = mobile?.setupExtra?.({ getBundle: () => bundle, selected, selectStock: (id) => {
+        if (!bundle.stocks.some((s) => s.id === id)) return;
+        stockId = id;
+        dcfResult = null;
+        $("dcf-result").innerHTML = "";
+        $("fcf").value = "";
+        $("shares").value = "";
+        render();
+      }, go, esc, fmt, pct, isNum, metric, table, csv });
       init();
     }
   });
 
-  // src/main.js
-  init_dist();
-
-  // node_modules/@capacitor/filesystem/dist/esm/index.js
-  init_dist();
-
-  // node_modules/@capacitor/synapse/dist/synapse.mjs
-  function s(t) {
-    t.CapacitorUtils.Synapse = new Proxy(
-      {},
-      {
-        get(e, n) {
-          return new Proxy({}, {
-            get(w, o) {
-              return (c, p, r) => {
-                const i = t.Capacitor.Plugins[n];
-                if (i === void 0) {
-                  r(new Error(`Capacitor plugin ${n} not found`));
-                  return;
-                }
-                if (typeof i[o] != "function") {
-                  r(new Error(`Method ${o} not found in Capacitor plugin ${n}`));
-                  return;
-                }
-                (async () => {
-                  try {
-                    const a = await i[o](c);
-                    p(a);
-                  } catch (a) {
-                    r(a);
+  // mobile/legacy/capacitor-runtime.js
+  (() => {
+    var __defProp = Object.defineProperty;
+    var __getOwnPropNames2 = Object.getOwnPropertyNames;
+    var __esm2 = (fn, res, err) => function __init() {
+      if (err) throw err[0];
+      try {
+        return fn && (res = (0, fn[__getOwnPropNames2(fn)[0]])(fn = 0)), res;
+      } catch (e) {
+        throw err = [e], e;
+      }
+    };
+    var __export = (target, all) => {
+      for (var name in all)
+        __defProp(target, name, { get: all[name], enumerable: true });
+    };
+    var ExceptionCode, CapacitorException, getPlatformId, createCapacitor, initCapacitorGlobal, Capacitor2, registerPlugin2, WebPlugin, encode, decode, CapacitorCookiesPluginWeb, CapacitorCookies, readBlobAsBase64, normalizeHttpHeaders, buildUrlParams, buildRequestInit, CapacitorHttpPluginWeb, CapacitorHttp2, SystemBarsStyle, SystemBarType, SystemBarsPluginWeb, SystemBars;
+    var init_dist = __esm2({
+      "node_modules/@capacitor/core/dist/index.js"() {
+        (function(ExceptionCode2) {
+          ExceptionCode2["Unimplemented"] = "UNIMPLEMENTED";
+          ExceptionCode2["Unavailable"] = "UNAVAILABLE";
+        })(ExceptionCode || (ExceptionCode = {}));
+        CapacitorException = class extends Error {
+          constructor(message, code, data) {
+            super(message);
+            this.message = message;
+            this.code = code;
+            this.data = data;
+          }
+        };
+        getPlatformId = (win) => {
+          var _a, _b;
+          if (win === null || win === void 0 ? void 0 : win.androidBridge) {
+            return "android";
+          } else if ((_b = (_a = win === null || win === void 0 ? void 0 : win.webkit) === null || _a === void 0 ? void 0 : _a.messageHandlers) === null || _b === void 0 ? void 0 : _b.bridge) {
+            return "ios";
+          } else {
+            return "web";
+          }
+        };
+        createCapacitor = (win) => {
+          const capCustomPlatform = win.CapacitorCustomPlatform || null;
+          const cap = win.Capacitor || {};
+          const Plugins = cap.Plugins = cap.Plugins || {};
+          const getPlatform = () => {
+            return capCustomPlatform !== null ? capCustomPlatform.name : getPlatformId(win);
+          };
+          const isNativePlatform = () => getPlatform() !== "web";
+          const isPluginAvailable = (pluginName) => {
+            const plugin = registeredPlugins.get(pluginName);
+            if (plugin === null || plugin === void 0 ? void 0 : plugin.platforms.has(getPlatform())) {
+              return true;
+            }
+            if (getPluginHeader(pluginName)) {
+              return true;
+            }
+            return false;
+          };
+          const getPluginHeader = (pluginName) => {
+            var _a;
+            return (_a = cap.PluginHeaders) === null || _a === void 0 ? void 0 : _a.find((h) => h.name === pluginName);
+          };
+          const handleError = (err) => win.console.error(err);
+          const registeredPlugins = /* @__PURE__ */ new Map();
+          const registerPlugin22 = (pluginName, jsImplementations = {}) => {
+            const registeredPlugin = registeredPlugins.get(pluginName);
+            if (registeredPlugin) {
+              console.warn(`Capacitor plugin "${pluginName}" already registered. Cannot register plugins twice.`);
+              return registeredPlugin.proxy;
+            }
+            const platform = getPlatform();
+            const pluginHeader = getPluginHeader(pluginName);
+            let jsImplementation;
+            const loadPluginImplementation = async () => {
+              if (!jsImplementation && platform in jsImplementations) {
+                jsImplementation = typeof jsImplementations[platform] === "function" ? jsImplementation = await jsImplementations[platform]() : jsImplementation = jsImplementations[platform];
+              } else if (capCustomPlatform !== null && !jsImplementation && "web" in jsImplementations) {
+                jsImplementation = typeof jsImplementations["web"] === "function" ? jsImplementation = await jsImplementations["web"]() : jsImplementation = jsImplementations["web"];
+              }
+              return jsImplementation;
+            };
+            const createPluginMethod = (impl, prop) => {
+              var _a, _b;
+              if (pluginHeader) {
+                const methodHeader = pluginHeader === null || pluginHeader === void 0 ? void 0 : pluginHeader.methods.find((m) => prop === m.name);
+                if (methodHeader) {
+                  if (methodHeader.rtype === "promise") {
+                    return (options) => cap.nativePromise(pluginName, prop.toString(), options);
+                  } else {
+                    return (options, callback) => cap.nativeCallback(pluginName, prop.toString(), options, callback);
                   }
-                })();
+                } else if (impl) {
+                  return (_a = impl[prop]) === null || _a === void 0 ? void 0 : _a.bind(impl);
+                }
+              } else if (impl) {
+                return (_b = impl[prop]) === null || _b === void 0 ? void 0 : _b.bind(impl);
+              } else {
+                throw new CapacitorException(`"${pluginName}" plugin is not implemented on ${platform}`, ExceptionCode.Unimplemented);
+              }
+            };
+            const createPluginMethodWrapper = (prop) => {
+              let remove;
+              const wrapper = (...args) => {
+                const p = loadPluginImplementation().then((impl) => {
+                  const fn = createPluginMethod(impl, prop);
+                  if (fn) {
+                    const p2 = fn(...args);
+                    remove = p2 === null || p2 === void 0 ? void 0 : p2.remove;
+                    return p2;
+                  } else {
+                    throw new CapacitorException(`"${pluginName}.${prop}()" is not implemented on ${platform}`, ExceptionCode.Unimplemented);
+                  }
+                });
+                if (prop === "addListener") {
+                  p.remove = async () => remove();
+                }
+                return p;
+              };
+              wrapper.toString = () => `${prop.toString()}() { [capacitor code] }`;
+              Object.defineProperty(wrapper, "name", {
+                value: prop,
+                writable: false,
+                configurable: false
+              });
+              return wrapper;
+            };
+            const addListener = createPluginMethodWrapper("addListener");
+            const removeListener = createPluginMethodWrapper("removeListener");
+            const addListenerNative = (eventName, callback) => {
+              const call = addListener({ eventName }, callback);
+              const remove = async () => {
+                const callbackId = await call;
+                removeListener({
+                  eventName,
+                  callbackId
+                }, callback);
+              };
+              const p = new Promise((resolve2) => call.then(() => resolve2({ remove })));
+              p.remove = async () => {
+                console.warn(`Using addListener() without 'await' is deprecated.`);
+                await remove();
+              };
+              return p;
+            };
+            const proxy = new Proxy({}, {
+              get(_, prop) {
+                switch (prop) {
+                  // https://github.com/facebook/react/issues/20030
+                  case "$$typeof":
+                    return void 0;
+                  case "toJSON":
+                    return () => ({});
+                  case "addListener":
+                    return pluginHeader ? addListenerNative : addListener;
+                  case "removeListener":
+                    return removeListener;
+                  default:
+                    return createPluginMethodWrapper(prop);
+                }
+              }
+            });
+            Plugins[pluginName] = proxy;
+            registeredPlugins.set(pluginName, {
+              name: pluginName,
+              proxy,
+              platforms: /* @__PURE__ */ new Set([...Object.keys(jsImplementations), ...pluginHeader ? [platform] : []])
+            });
+            return proxy;
+          };
+          if (!cap.convertFileSrc) {
+            cap.convertFileSrc = (filePath) => filePath;
+          }
+          cap.getPlatform = getPlatform;
+          cap.handleError = handleError;
+          cap.isNativePlatform = isNativePlatform;
+          cap.isPluginAvailable = isPluginAvailable;
+          cap.registerPlugin = registerPlugin22;
+          cap.Exception = CapacitorException;
+          cap.DEBUG = !!cap.DEBUG;
+          cap.isLoggingEnabled = !!cap.isLoggingEnabled;
+          return cap;
+        };
+        initCapacitorGlobal = (win) => win.Capacitor = createCapacitor(win);
+        Capacitor2 = /* @__PURE__ */ initCapacitorGlobal(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : {});
+        registerPlugin2 = Capacitor2.registerPlugin;
+        WebPlugin = class {
+          constructor() {
+            this.listeners = {};
+            this.retainedEventArguments = {};
+            this.windowListeners = {};
+          }
+          addListener(eventName, listenerFunc) {
+            let firstListener = false;
+            const listeners = this.listeners[eventName];
+            if (!listeners) {
+              this.listeners[eventName] = [];
+              firstListener = true;
+            }
+            this.listeners[eventName].push(listenerFunc);
+            const windowListener = this.windowListeners[eventName];
+            if (windowListener && !windowListener.registered) {
+              this.addWindowListener(windowListener);
+            }
+            if (firstListener) {
+              this.sendRetainedArgumentsForEvent(eventName);
+            }
+            const remove = async () => this.removeListener(eventName, listenerFunc);
+            const p = Promise.resolve({ remove });
+            return p;
+          }
+          async removeAllListeners() {
+            this.listeners = {};
+            for (const listener in this.windowListeners) {
+              this.removeWindowListener(this.windowListeners[listener]);
+            }
+            this.windowListeners = {};
+          }
+          notifyListeners(eventName, data, retainUntilConsumed) {
+            const listeners = this.listeners[eventName];
+            if (!listeners) {
+              if (retainUntilConsumed) {
+                let args = this.retainedEventArguments[eventName];
+                if (!args) {
+                  args = [];
+                }
+                args.push(data);
+                this.retainedEventArguments[eventName] = args;
+              }
+              return;
+            }
+            listeners.forEach((listener) => listener(data));
+          }
+          hasListeners(eventName) {
+            var _a;
+            return !!((_a = this.listeners[eventName]) === null || _a === void 0 ? void 0 : _a.length);
+          }
+          registerWindowListener(windowEventName, pluginEventName) {
+            this.windowListeners[pluginEventName] = {
+              registered: false,
+              windowEventName,
+              pluginEventName,
+              handler: (event) => {
+                this.notifyListeners(pluginEventName, event);
+              }
+            };
+          }
+          unimplemented(msg = "not implemented") {
+            return new Capacitor2.Exception(msg, ExceptionCode.Unimplemented);
+          }
+          unavailable(msg = "not available") {
+            return new Capacitor2.Exception(msg, ExceptionCode.Unavailable);
+          }
+          async removeListener(eventName, listenerFunc) {
+            const listeners = this.listeners[eventName];
+            if (!listeners) {
+              return;
+            }
+            const index = listeners.indexOf(listenerFunc);
+            if (index !== -1) {
+              this.listeners[eventName].splice(index, 1);
+            }
+            if (!this.listeners[eventName].length) {
+              this.removeWindowListener(this.windowListeners[eventName]);
+            }
+          }
+          addWindowListener(handle) {
+            window.addEventListener(handle.windowEventName, handle.handler);
+            handle.registered = true;
+          }
+          removeWindowListener(handle) {
+            if (!handle) {
+              return;
+            }
+            window.removeEventListener(handle.windowEventName, handle.handler);
+            handle.registered = false;
+          }
+          sendRetainedArgumentsForEvent(eventName) {
+            const args = this.retainedEventArguments[eventName];
+            if (!args) {
+              return;
+            }
+            delete this.retainedEventArguments[eventName];
+            args.forEach((arg) => {
+              this.notifyListeners(eventName, arg);
+            });
+          }
+        };
+        encode = (str) => encodeURIComponent(str).replace(/%(2[346B]|5E|60|7C)/g, decodeURIComponent).replace(/[()]/g, escape);
+        decode = (str) => str.replace(/(%[\dA-F]{2})+/gi, decodeURIComponent);
+        CapacitorCookiesPluginWeb = class extends WebPlugin {
+          async getCookies() {
+            const cookies = document.cookie;
+            const cookieMap = {};
+            cookies.split(";").forEach((cookie) => {
+              if (cookie.length <= 0)
+                return;
+              let [key, value] = cookie.replace(/=/, "CAP_COOKIE").split("CAP_COOKIE");
+              key = decode(key).trim();
+              value = decode(value).trim();
+              cookieMap[key] = value;
+            });
+            return cookieMap;
+          }
+          async setCookie(options) {
+            try {
+              const encodedKey = encode(options.key);
+              const encodedValue = encode(options.value);
+              const expires = options.expires ? `; expires=${options.expires.replace("expires=", "")}` : "";
+              const path = (options.path || "/").replace("path=", "");
+              const domain = options.url != null && options.url.length > 0 ? `domain=${options.url}` : "";
+              document.cookie = `${encodedKey}=${encodedValue || ""}${expires}; path=${path}; ${domain};`;
+            } catch (error2) {
+              return Promise.reject(error2);
+            }
+          }
+          async deleteCookie(options) {
+            try {
+              document.cookie = `${options.key}=; Max-Age=0`;
+            } catch (error2) {
+              return Promise.reject(error2);
+            }
+          }
+          async clearCookies() {
+            try {
+              const cookies = document.cookie.split(";") || [];
+              for (const cookie of cookies) {
+                document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, `=;expires=${(/* @__PURE__ */ new Date()).toUTCString()};path=/`);
+              }
+            } catch (error2) {
+              return Promise.reject(error2);
+            }
+          }
+          async clearAllCookies() {
+            try {
+              await this.clearCookies();
+            } catch (error2) {
+              return Promise.reject(error2);
+            }
+          }
+        };
+        CapacitorCookies = registerPlugin2("CapacitorCookies", {
+          web: () => new CapacitorCookiesPluginWeb()
+        });
+        readBlobAsBase64 = async (blob) => new Promise((resolve2, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64String = reader.result;
+            resolve2(base64String.indexOf(",") >= 0 ? base64String.split(",")[1] : base64String);
+          };
+          reader.onerror = (error2) => reject(error2);
+          reader.readAsDataURL(blob);
+        });
+        normalizeHttpHeaders = (headers = {}) => {
+          const originalKeys = Object.keys(headers);
+          const loweredKeys = Object.keys(headers).map((k) => k.toLocaleLowerCase());
+          const normalized = loweredKeys.reduce((acc, key, index) => {
+            acc[key] = headers[originalKeys[index]];
+            return acc;
+          }, {});
+          return normalized;
+        };
+        buildUrlParams = (params2, shouldEncode = true) => {
+          if (!params2)
+            return null;
+          const output = Object.entries(params2).reduce((accumulator, entry) => {
+            const [key, value] = entry;
+            let encodedValue;
+            let item;
+            if (Array.isArray(value)) {
+              item = "";
+              value.forEach((str) => {
+                encodedValue = shouldEncode ? encodeURIComponent(str) : str;
+                item += `${key}=${encodedValue}&`;
+              });
+              item.slice(0, -1);
+            } else {
+              encodedValue = shouldEncode ? encodeURIComponent(value) : value;
+              item = `${key}=${encodedValue}`;
+            }
+            return `${accumulator}&${item}`;
+          }, "");
+          return output.substr(1);
+        };
+        buildRequestInit = (options, extra = {}) => {
+          const output = Object.assign({ method: options.method || "GET", headers: options.headers }, extra);
+          const headers = normalizeHttpHeaders(options.headers);
+          const type = headers["content-type"] || "";
+          if (typeof options.data === "string") {
+            output.body = options.data;
+          } else if (type.includes("application/x-www-form-urlencoded")) {
+            const params2 = new URLSearchParams();
+            for (const [key, value] of Object.entries(options.data || {})) {
+              params2.set(key, value);
+            }
+            output.body = params2.toString();
+          } else if (type.includes("multipart/form-data") || options.data instanceof FormData) {
+            const form = new FormData();
+            if (options.data instanceof FormData) {
+              options.data.forEach((value, key) => {
+                form.append(key, value);
+              });
+            } else {
+              for (const key of Object.keys(options.data)) {
+                form.append(key, options.data[key]);
+              }
+            }
+            output.body = form;
+            const headers2 = new Headers(output.headers);
+            headers2.delete("content-type");
+            output.headers = headers2;
+          } else if (type.includes("application/json") || typeof options.data === "object") {
+            output.body = JSON.stringify(options.data);
+          }
+          return output;
+        };
+        CapacitorHttpPluginWeb = class extends WebPlugin {
+          /**
+           * Perform an Http request given a set of options
+           * @param options Options to build the HTTP request
+           */
+          async request(options) {
+            const requestInit = buildRequestInit(options, options.webFetchExtra);
+            const urlParams = buildUrlParams(options.params, options.shouldEncodeUrlParams);
+            const url = urlParams ? `${options.url}?${urlParams}` : options.url;
+            const response = await fetch(url, requestInit);
+            const contentType = response.headers.get("content-type") || "";
+            let { responseType = "text" } = response.ok ? options : {};
+            if (contentType.includes("application/json")) {
+              responseType = "json";
+            }
+            let data;
+            let blob;
+            switch (responseType) {
+              case "arraybuffer":
+              case "blob":
+                blob = await response.blob();
+                data = await readBlobAsBase64(blob);
+                break;
+              case "json":
+                data = await response.json();
+                break;
+              case "document":
+              case "text":
+              default:
+                data = await response.text();
+            }
+            const headers = {};
+            response.headers.forEach((value, key) => {
+              headers[key] = value;
+            });
+            return {
+              data,
+              headers,
+              status: response.status,
+              url: response.url
+            };
+          }
+          /**
+           * Perform an Http GET request given a set of options
+           * @param options Options to build the HTTP request
+           */
+          async get(options) {
+            return this.request(Object.assign(Object.assign({}, options), { method: "GET" }));
+          }
+          /**
+           * Perform an Http POST request given a set of options
+           * @param options Options to build the HTTP request
+           */
+          async post(options) {
+            return this.request(Object.assign(Object.assign({}, options), { method: "POST" }));
+          }
+          /**
+           * Perform an Http PUT request given a set of options
+           * @param options Options to build the HTTP request
+           */
+          async put(options) {
+            return this.request(Object.assign(Object.assign({}, options), { method: "PUT" }));
+          }
+          /**
+           * Perform an Http PATCH request given a set of options
+           * @param options Options to build the HTTP request
+           */
+          async patch(options) {
+            return this.request(Object.assign(Object.assign({}, options), { method: "PATCH" }));
+          }
+          /**
+           * Perform an Http DELETE request given a set of options
+           * @param options Options to build the HTTP request
+           */
+          async delete(options) {
+            return this.request(Object.assign(Object.assign({}, options), { method: "DELETE" }));
+          }
+        };
+        CapacitorHttp2 = registerPlugin2("CapacitorHttp", {
+          web: () => new CapacitorHttpPluginWeb()
+        });
+        (function(SystemBarsStyle2) {
+          SystemBarsStyle2["Dark"] = "DARK";
+          SystemBarsStyle2["Light"] = "LIGHT";
+          SystemBarsStyle2["Default"] = "DEFAULT";
+        })(SystemBarsStyle || (SystemBarsStyle = {}));
+        (function(SystemBarType2) {
+          SystemBarType2["StatusBar"] = "StatusBar";
+          SystemBarType2["NavigationBar"] = "NavigationBar";
+        })(SystemBarType || (SystemBarType = {}));
+        SystemBarsPluginWeb = class extends WebPlugin {
+          async setStyle() {
+            this.unavailable("not available for web");
+          }
+          async setAnimation() {
+            this.unavailable("not available for web");
+          }
+          async show() {
+            this.unavailable("not available for web");
+          }
+          async hide() {
+            this.unavailable("not available for web");
+          }
+        };
+        SystemBars = registerPlugin2("SystemBars", {
+          web: () => new SystemBarsPluginWeb()
+        });
+      }
+    });
+    var Directory2, Encoding2;
+    var init_definitions = __esm2({
+      "node_modules/@capacitor/filesystem/dist/esm/definitions.js"() {
+        (function(Directory22) {
+          Directory22["Documents"] = "DOCUMENTS";
+          Directory22["Data"] = "DATA";
+          Directory22["Library"] = "LIBRARY";
+          Directory22["Cache"] = "CACHE";
+          Directory22["External"] = "EXTERNAL";
+          Directory22["ExternalStorage"] = "EXTERNAL_STORAGE";
+          Directory22["ExternalCache"] = "EXTERNAL_CACHE";
+          Directory22["LibraryNoCloud"] = "LIBRARY_NO_CLOUD";
+          Directory22["Temporary"] = "TEMPORARY";
+        })(Directory2 || (Directory2 = {}));
+        (function(Encoding22) {
+          Encoding22["UTF8"] = "utf8";
+          Encoding22["ASCII"] = "ascii";
+          Encoding22["UTF16"] = "utf16";
+        })(Encoding2 || (Encoding2 = {}));
+      }
+    });
+    var web_exports = {};
+    __export(web_exports, {
+      FilesystemWeb: () => FilesystemWeb
+    });
+    function resolve(path) {
+      const posix = path.split("/").filter((item) => item !== ".");
+      const newPosix = [];
+      posix.forEach((item) => {
+        if (item === ".." && newPosix.length > 0 && newPosix[newPosix.length - 1] !== "..") {
+          newPosix.pop();
+        } else {
+          newPosix.push(item);
+        }
+      });
+      return newPosix.join("/");
+    }
+    function isPathParent(parent, children) {
+      parent = resolve(parent);
+      children = resolve(children);
+      const pathsA = parent.split("/");
+      const pathsB = children.split("/");
+      return parent !== children && pathsA.every((value, index) => value === pathsB[index]);
+    }
+    var FilesystemWeb;
+    var init_web = __esm2({
+      "node_modules/@capacitor/filesystem/dist/esm/web.js"() {
+        init_dist();
+        init_definitions();
+        FilesystemWeb = class _FilesystemWeb extends WebPlugin {
+          constructor() {
+            super(...arguments);
+            this.DB_VERSION = 1;
+            this.DB_NAME = "Disc";
+            this._writeCmds = ["add", "put", "delete"];
+            this.downloadFile = async (options) => {
+              var _a, _b;
+              const requestInit = buildRequestInit(options, options.webFetchExtra);
+              const response = await fetch(options.url, requestInit);
+              let blob;
+              if (!options.progress)
+                blob = await response.blob();
+              else if (!(response === null || response === void 0 ? void 0 : response.body))
+                blob = new Blob();
+              else {
+                const reader = response.body.getReader();
+                let bytes = 0;
+                const chunks = [];
+                const contentType = response.headers.get("content-type");
+                const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done)
+                    break;
+                  chunks.push(value);
+                  bytes += (value === null || value === void 0 ? void 0 : value.length) || 0;
+                  const status2 = {
+                    url: options.url,
+                    bytes,
+                    contentLength
+                  };
+                  this.notifyListeners("progress", status2);
+                }
+                const allChunks = new Uint8Array(bytes);
+                let position = 0;
+                for (const chunk of chunks) {
+                  if (typeof chunk === "undefined")
+                    continue;
+                  allChunks.set(chunk, position);
+                  position += chunk.length;
+                }
+                blob = new Blob([allChunks.buffer], { type: contentType || void 0 });
+              }
+              const result = await this.writeFile({
+                path: options.path,
+                directory: (_a = options.directory) !== null && _a !== void 0 ? _a : void 0,
+                recursive: (_b = options.recursive) !== null && _b !== void 0 ? _b : false,
+                data: blob
+              });
+              return { path: result.uri, blob };
+            };
+          }
+          readFileInChunks(_options, _callback) {
+            throw this.unavailable("Method not implemented.");
+          }
+          async initDb() {
+            if (this._db !== void 0) {
+              return this._db;
+            }
+            if (!("indexedDB" in window)) {
+              throw this.unavailable("This browser doesn't support IndexedDB");
+            }
+            return new Promise((resolve2, reject) => {
+              const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+              request.onupgradeneeded = _FilesystemWeb.doUpgrade;
+              request.onsuccess = () => {
+                this._db = request.result;
+                resolve2(request.result);
+              };
+              request.onerror = () => reject(request.error);
+              request.onblocked = () => {
+                console.warn("db blocked");
+              };
+            });
+          }
+          static doUpgrade(event) {
+            const eventTarget = event.target;
+            const db = eventTarget.result;
+            switch (event.oldVersion) {
+              case 0:
+              case 1:
+              default: {
+                if (db.objectStoreNames.contains("FileStorage")) {
+                  db.deleteObjectStore("FileStorage");
+                }
+                const store = db.createObjectStore("FileStorage", { keyPath: "path" });
+                store.createIndex("by_folder", "folder");
+              }
+            }
+          }
+          async dbRequest(cmd, args) {
+            const readFlag = this._writeCmds.indexOf(cmd) !== -1 ? "readwrite" : "readonly";
+            return this.initDb().then((conn) => {
+              return new Promise((resolve2, reject) => {
+                const tx = conn.transaction(["FileStorage"], readFlag);
+                const store = tx.objectStore("FileStorage");
+                const req = store[cmd](...args);
+                req.onsuccess = () => resolve2(req.result);
+                req.onerror = () => reject(req.error);
+              });
+            });
+          }
+          async dbIndexRequest(indexName, cmd, args) {
+            const readFlag = this._writeCmds.indexOf(cmd) !== -1 ? "readwrite" : "readonly";
+            return this.initDb().then((conn) => {
+              return new Promise((resolve2, reject) => {
+                const tx = conn.transaction(["FileStorage"], readFlag);
+                const store = tx.objectStore("FileStorage");
+                const index = store.index(indexName);
+                const req = index[cmd](...args);
+                req.onsuccess = () => resolve2(req.result);
+                req.onerror = () => reject(req.error);
+              });
+            });
+          }
+          getPath(directory, uriPath) {
+            const cleanedUriPath = uriPath !== void 0 ? uriPath.replace(/^[/]+|[/]+$/g, "") : "";
+            let fsPath = "";
+            if (directory !== void 0)
+              fsPath += "/" + directory;
+            if (uriPath !== "")
+              fsPath += "/" + cleanedUriPath;
+            return fsPath;
+          }
+          async clear() {
+            const conn = await this.initDb();
+            const tx = conn.transaction(["FileStorage"], "readwrite");
+            const store = tx.objectStore("FileStorage");
+            store.clear();
+          }
+          /**
+           * Read a file from disk
+           * @param options options for the file read
+           * @return a promise that resolves with the read file data result
+           */
+          async readFile(options) {
+            const path = this.getPath(options.directory, options.path);
+            const entry = await this.dbRequest("get", [path]);
+            if (entry === void 0)
+              throw Error("File does not exist.");
+            return { data: entry.content ? entry.content : "" };
+          }
+          /**
+           * Write a file to disk in the specified location on device
+           * @param options options for the file write
+           * @return a promise that resolves with the file write result
+           */
+          async writeFile(options) {
+            const path = this.getPath(options.directory, options.path);
+            let data = options.data;
+            const encoding = options.encoding;
+            const doRecursive = options.recursive;
+            const occupiedEntry = await this.dbRequest("get", [path]);
+            if (occupiedEntry && occupiedEntry.type === "directory")
+              throw Error("The supplied path is a directory.");
+            const parentPath = path.substr(0, path.lastIndexOf("/"));
+            const parentEntry = await this.dbRequest("get", [parentPath]);
+            if (parentEntry === void 0) {
+              const subDirIndex = parentPath.indexOf("/", 1);
+              if (subDirIndex !== -1) {
+                const parentArgPath = parentPath.substr(subDirIndex);
+                await this.mkdir({
+                  path: parentArgPath,
+                  directory: options.directory,
+                  recursive: doRecursive
+                });
+              }
+            }
+            if (!encoding && !(data instanceof Blob)) {
+              data = data.indexOf(",") >= 0 ? data.split(",")[1] : data;
+              if (!this.isBase64String(data))
+                throw Error("The supplied data is not valid base64 content.");
+            }
+            const now = Date.now();
+            const pathObj = {
+              path,
+              folder: parentPath,
+              type: "file",
+              size: data instanceof Blob ? data.size : data.length,
+              ctime: now,
+              mtime: now,
+              content: data
+            };
+            await this.dbRequest("put", [pathObj]);
+            return {
+              uri: pathObj.path
+            };
+          }
+          /**
+           * Append to a file on disk in the specified location on device
+           * @param options options for the file append
+           * @return a promise that resolves with the file write result
+           */
+          async appendFile(options) {
+            const path = this.getPath(options.directory, options.path);
+            let data = options.data;
+            const encoding = options.encoding;
+            const parentPath = path.substr(0, path.lastIndexOf("/"));
+            const now = Date.now();
+            let ctime = now;
+            const occupiedEntry = await this.dbRequest("get", [path]);
+            if (occupiedEntry && occupiedEntry.type === "directory")
+              throw Error("The supplied path is a directory.");
+            const parentEntry = await this.dbRequest("get", [parentPath]);
+            if (parentEntry === void 0) {
+              const subDirIndex = parentPath.indexOf("/", 1);
+              if (subDirIndex !== -1) {
+                const parentArgPath = parentPath.substr(subDirIndex);
+                await this.mkdir({
+                  path: parentArgPath,
+                  directory: options.directory,
+                  recursive: true
+                });
+              }
+            }
+            if (!encoding && !this.isBase64String(data))
+              throw Error("The supplied data is not valid base64 content.");
+            if (occupiedEntry !== void 0) {
+              if (occupiedEntry.content instanceof Blob) {
+                throw Error("The occupied entry contains a Blob object which cannot be appended to.");
+              }
+              if (occupiedEntry.content !== void 0 && !encoding) {
+                data = btoa(atob(occupiedEntry.content) + atob(data));
+              } else {
+                data = occupiedEntry.content + data;
+              }
+              ctime = occupiedEntry.ctime;
+            }
+            const pathObj = {
+              path,
+              folder: parentPath,
+              type: "file",
+              size: data.length,
+              ctime,
+              mtime: now,
+              content: data
+            };
+            await this.dbRequest("put", [pathObj]);
+          }
+          /**
+           * Delete a file from disk
+           * @param options options for the file delete
+           * @return a promise that resolves with the deleted file data result
+           */
+          async deleteFile(options) {
+            const path = this.getPath(options.directory, options.path);
+            const entry = await this.dbRequest("get", [path]);
+            if (entry === void 0)
+              throw Error("File does not exist.");
+            const entries = await this.dbIndexRequest("by_folder", "getAllKeys", [IDBKeyRange.only(path)]);
+            if (entries.length !== 0)
+              throw Error("Folder is not empty.");
+            await this.dbRequest("delete", [path]);
+          }
+          /**
+           * Create a directory.
+           * @param options options for the mkdir
+           * @return a promise that resolves with the mkdir result
+           */
+          async mkdir(options) {
+            const path = this.getPath(options.directory, options.path);
+            const doRecursive = options.recursive;
+            const parentPath = path.substr(0, path.lastIndexOf("/"));
+            const depth = (path.match(/\//g) || []).length;
+            const parentEntry = await this.dbRequest("get", [parentPath]);
+            const occupiedEntry = await this.dbRequest("get", [path]);
+            if (depth === 1)
+              throw Error("Cannot create Root directory");
+            if (occupiedEntry !== void 0)
+              throw Error("Current directory does already exist.");
+            if (!doRecursive && depth !== 2 && parentEntry === void 0)
+              throw Error("Parent directory must exist");
+            if (doRecursive && depth !== 2 && parentEntry === void 0) {
+              const parentArgPath = parentPath.substr(parentPath.indexOf("/", 1));
+              await this.mkdir({
+                path: parentArgPath,
+                directory: options.directory,
+                recursive: doRecursive
+              });
+            }
+            const now = Date.now();
+            const pathObj = {
+              path,
+              folder: parentPath,
+              type: "directory",
+              size: 0,
+              ctime: now,
+              mtime: now
+            };
+            await this.dbRequest("put", [pathObj]);
+          }
+          /**
+           * Remove a directory
+           * @param options the options for the directory remove
+           */
+          async rmdir(options) {
+            const { path, directory, recursive } = options;
+            const fullPath = this.getPath(directory, path);
+            const entry = await this.dbRequest("get", [fullPath]);
+            if (entry === void 0)
+              throw Error("Folder does not exist.");
+            if (entry.type !== "directory")
+              throw Error("Requested path is not a directory");
+            const readDirResult = await this.readdir({ path, directory });
+            if (readDirResult.files.length !== 0 && !recursive)
+              throw Error("Folder is not empty");
+            for (const entry2 of readDirResult.files) {
+              const entryPath = `${path}/${entry2.name}`;
+              const entryObj = await this.stat({ path: entryPath, directory });
+              if (entryObj.type === "file") {
+                await this.deleteFile({ path: entryPath, directory });
+              } else {
+                await this.rmdir({ path: entryPath, directory, recursive });
+              }
+            }
+            await this.dbRequest("delete", [fullPath]);
+          }
+          /**
+           * Return a list of files from the directory (not recursive)
+           * @param options the options for the readdir operation
+           * @return a promise that resolves with the readdir directory listing result
+           */
+          async readdir(options) {
+            const path = this.getPath(options.directory, options.path);
+            const entry = await this.dbRequest("get", [path]);
+            if (options.path !== "" && entry === void 0)
+              throw Error("Folder does not exist.");
+            const entries = await this.dbIndexRequest("by_folder", "getAllKeys", [IDBKeyRange.only(path)]);
+            const files = await Promise.all(entries.map(async (e) => {
+              let subEntry = await this.dbRequest("get", [e]);
+              if (subEntry === void 0) {
+                subEntry = await this.dbRequest("get", [e + "/"]);
+              }
+              return {
+                name: e.substring(path.length + 1),
+                type: subEntry.type,
+                size: subEntry.size,
+                ctime: subEntry.ctime,
+                mtime: subEntry.mtime,
+                uri: subEntry.path
+              };
+            }));
+            return { files };
+          }
+          /**
+           * Return full File URI for a path and directory
+           * @param options the options for the stat operation
+           * @return a promise that resolves with the file stat result
+           */
+          async getUri(options) {
+            const path = this.getPath(options.directory, options.path);
+            let entry = await this.dbRequest("get", [path]);
+            if (entry === void 0) {
+              entry = await this.dbRequest("get", [path + "/"]);
+            }
+            return {
+              uri: (entry === null || entry === void 0 ? void 0 : entry.path) || path
+            };
+          }
+          /**
+           * Return data about a file
+           * @param options the options for the stat operation
+           * @return a promise that resolves with the file stat result
+           */
+          async stat(options) {
+            const path = this.getPath(options.directory, options.path);
+            let entry = await this.dbRequest("get", [path]);
+            if (entry === void 0) {
+              entry = await this.dbRequest("get", [path + "/"]);
+            }
+            if (entry === void 0)
+              throw Error("Entry does not exist.");
+            return {
+              name: entry.path.substring(path.length + 1),
+              type: entry.type,
+              size: entry.size,
+              ctime: entry.ctime,
+              mtime: entry.mtime,
+              uri: entry.path
+            };
+          }
+          /**
+           * Rename a file or directory
+           * @param options the options for the rename operation
+           * @return a promise that resolves with the rename result
+           */
+          async rename(options) {
+            await this._copy(options, true);
+            return;
+          }
+          /**
+           * Copy a file or directory
+           * @param options the options for the copy operation
+           * @return a promise that resolves with the copy result
+           */
+          async copy(options) {
+            return this._copy(options, false);
+          }
+          async requestPermissions() {
+            return { publicStorage: "granted" };
+          }
+          async checkPermissions() {
+            return { publicStorage: "granted" };
+          }
+          /**
+           * Function that can perform a copy or a rename
+           * @param options the options for the rename operation
+           * @param doRename whether to perform a rename or copy operation
+           * @return a promise that resolves with the result
+           */
+          async _copy(options, doRename = false) {
+            let { toDirectory } = options;
+            const { to, from, directory: fromDirectory } = options;
+            if (!to || !from) {
+              throw Error("Both to and from must be provided");
+            }
+            if (!toDirectory) {
+              toDirectory = fromDirectory;
+            }
+            const fromPath = this.getPath(fromDirectory, from);
+            const toPath = this.getPath(toDirectory, to);
+            if (fromPath === toPath) {
+              return {
+                uri: toPath
               };
             }
-          });
-        }
+            if (isPathParent(fromPath, toPath)) {
+              throw Error("To path cannot contain the from path");
+            }
+            let toObj;
+            try {
+              toObj = await this.stat({
+                path: to,
+                directory: toDirectory
+              });
+            } catch (e) {
+              const toPathComponents = to.split("/");
+              toPathComponents.pop();
+              const toPath2 = toPathComponents.join("/");
+              if (toPathComponents.length > 0) {
+                const toParentDirectory = await this.stat({
+                  path: toPath2,
+                  directory: toDirectory
+                });
+                if (toParentDirectory.type !== "directory") {
+                  throw new Error("Parent directory of the to path is a file");
+                }
+              }
+            }
+            if (toObj && toObj.type === "directory") {
+              throw new Error("Cannot overwrite a directory with a file");
+            }
+            const fromObj = await this.stat({
+              path: from,
+              directory: fromDirectory
+            });
+            const updateTime = async (path, ctime2, mtime) => {
+              const fullPath = this.getPath(toDirectory, path);
+              const entry = await this.dbRequest("get", [fullPath]);
+              entry.ctime = ctime2;
+              entry.mtime = mtime;
+              await this.dbRequest("put", [entry]);
+            };
+            const ctime = fromObj.ctime ? fromObj.ctime : Date.now();
+            switch (fromObj.type) {
+              // The "from" object is a file
+              case "file": {
+                const file = await this.readFile({
+                  path: from,
+                  directory: fromDirectory
+                });
+                if (doRename) {
+                  await this.deleteFile({
+                    path: from,
+                    directory: fromDirectory
+                  });
+                }
+                let encoding;
+                if (!(file.data instanceof Blob) && !this.isBase64String(file.data)) {
+                  encoding = Encoding2.UTF8;
+                }
+                const writeResult = await this.writeFile({
+                  path: to,
+                  directory: toDirectory,
+                  data: file.data,
+                  encoding
+                });
+                if (doRename) {
+                  await updateTime(to, ctime, fromObj.mtime);
+                }
+                return writeResult;
+              }
+              case "directory": {
+                if (toObj) {
+                  throw Error("Cannot move a directory over an existing object");
+                }
+                try {
+                  await this.mkdir({
+                    path: to,
+                    directory: toDirectory,
+                    recursive: false
+                  });
+                  if (doRename) {
+                    await updateTime(to, ctime, fromObj.mtime);
+                  }
+                } catch (e) {
+                }
+                const contents = (await this.readdir({
+                  path: from,
+                  directory: fromDirectory
+                })).files;
+                for (const filename of contents) {
+                  await this._copy({
+                    from: `${from}/${filename.name}`,
+                    to: `${to}/${filename.name}`,
+                    directory: fromDirectory,
+                    toDirectory
+                  }, doRename);
+                }
+                if (doRename) {
+                  await this.rmdir({
+                    path: from,
+                    directory: fromDirectory
+                  });
+                }
+              }
+            }
+            return {
+              uri: toPath
+            };
+          }
+          isBase64String(str) {
+            try {
+              return btoa(atob(str)) == str;
+            } catch (err) {
+              return false;
+            }
+          }
+        };
+        FilesystemWeb._debug = true;
       }
-    );
-  }
-  function u(t) {
-    t.CapacitorUtils.Synapse = new Proxy(
-      {},
-      {
-        get(e, n) {
-          return t.cordova.plugins[n];
-        }
+    });
+    var web_exports2 = {};
+    __export(web_exports2, {
+      PreferencesWeb: () => PreferencesWeb
+    });
+    var PreferencesWeb;
+    var init_web2 = __esm2({
+      "node_modules/@capacitor/preferences/dist/esm/web.js"() {
+        init_dist();
+        PreferencesWeb = class extends WebPlugin {
+          constructor() {
+            super(...arguments);
+            this.group = "CapacitorStorage";
+          }
+          async configure({ group }) {
+            if (typeof group === "string") {
+              this.group = group;
+            }
+          }
+          async get(options) {
+            const value = this.impl.getItem(this.applyPrefix(options.key));
+            return { value };
+          }
+          async set(options) {
+            this.impl.setItem(this.applyPrefix(options.key), options.value);
+          }
+          async remove(options) {
+            this.impl.removeItem(this.applyPrefix(options.key));
+          }
+          async keys() {
+            const keys = this.rawKeys().map((k) => k.substring(this.prefix.length));
+            return { keys };
+          }
+          async clear() {
+            for (const key of this.rawKeys()) {
+              this.impl.removeItem(key);
+            }
+          }
+          async migrate() {
+            var _a;
+            const migrated = [];
+            const existing = [];
+            const oldprefix = "_cap_";
+            const keys = Object.keys(this.impl).filter((k) => k.indexOf(oldprefix) === 0);
+            for (const oldkey of keys) {
+              const key = oldkey.substring(oldprefix.length);
+              const value = (_a = this.impl.getItem(oldkey)) !== null && _a !== void 0 ? _a : "";
+              const { value: currentValue } = await this.get({ key });
+              if (typeof currentValue === "string") {
+                existing.push(key);
+              } else {
+                await this.set({ key, value });
+                migrated.push(key);
+              }
+            }
+            return { migrated, existing };
+          }
+          async removeOld() {
+            const oldprefix = "_cap_";
+            const keys = Object.keys(this.impl).filter((k) => k.indexOf(oldprefix) === 0);
+            for (const oldkey of keys) {
+              this.impl.removeItem(oldkey);
+            }
+          }
+          get impl() {
+            return window.localStorage;
+          }
+          get prefix() {
+            return this.group === "NativeStorage" ? "" : `${this.group}.`;
+          }
+          rawKeys() {
+            return Object.keys(this.impl).filter((k) => k.indexOf(this.prefix) === 0);
+          }
+          applyPrefix(key) {
+            return this.prefix + key;
+          }
+        };
       }
-    );
-  }
-  function f(t = false) {
-    typeof window > "u" || (window.CapacitorUtils = window.CapacitorUtils || {}, window.Capacitor !== void 0 && !t ? s(window) : window.cordova !== void 0 && u(window));
-  }
+    });
+    var web_exports3 = {};
+    __export(web_exports3, {
+      AppWeb: () => AppWeb
+    });
+    var AppWeb;
+    var init_web3 = __esm2({
+      "node_modules/@capacitor/app/dist/esm/web.js"() {
+        init_dist();
+        AppWeb = class extends WebPlugin {
+          constructor() {
+            super();
+            this.handleVisibilityChange = () => {
+              const data = {
+                isActive: document.hidden !== true
+              };
+              this.notifyListeners("appStateChange", data);
+              if (document.hidden) {
+                this.notifyListeners("pause", null);
+              } else {
+                this.notifyListeners("resume", null);
+              }
+            };
+            document.addEventListener("visibilitychange", this.handleVisibilityChange, false);
+          }
+          exitApp() {
+            throw this.unimplemented("Not implemented on web.");
+          }
+          async getInfo() {
+            throw this.unimplemented("Not implemented on web.");
+          }
+          async getLaunchUrl() {
+            return { url: "" };
+          }
+          async getState() {
+            return { isActive: document.hidden !== true };
+          }
+          async minimizeApp() {
+            throw this.unimplemented("Not implemented on web.");
+          }
+          async toggleBackButtonHandler() {
+            throw this.unimplemented("Not implemented on web.");
+          }
+          async getAppLanguage() {
+            return {
+              value: navigator.language.split("-")[0].toLowerCase()
+            };
+          }
+        };
+      }
+    });
+    init_dist();
+    init_dist();
+    function s(t) {
+      t.CapacitorUtils.Synapse = new Proxy(
+        {},
+        {
+          get(e, n) {
+            return new Proxy({}, {
+              get(w, o) {
+                return (c, p, r) => {
+                  const i = t.Capacitor.Plugins[n];
+                  if (i === void 0) {
+                    r(new Error(`Capacitor plugin ${n} not found`));
+                    return;
+                  }
+                  if (typeof i[o] != "function") {
+                    r(new Error(`Method ${o} not found in Capacitor plugin ${n}`));
+                    return;
+                  }
+                  (async () => {
+                    try {
+                      const a = await i[o](c);
+                      p(a);
+                    } catch (a) {
+                      r(a);
+                    }
+                  })();
+                };
+              }
+            });
+          }
+        }
+      );
+    }
+    function u(t) {
+      t.CapacitorUtils.Synapse = new Proxy(
+        {},
+        {
+          get(e, n) {
+            return t.cordova.plugins[n];
+          }
+        }
+      );
+    }
+    function f(t = false) {
+      typeof window > "u" || (window.CapacitorUtils = window.CapacitorUtils || {}, window.Capacitor !== void 0 && !t ? s(window) : window.cordova !== void 0 && u(window));
+    }
+    init_definitions();
+    var Filesystem2 = registerPlugin2("Filesystem", {
+      web: () => Promise.resolve().then(() => (init_web(), web_exports)).then((m) => new m.FilesystemWeb())
+    });
+    f();
+    init_dist();
+    var Preferences2 = registerPlugin2("Preferences", {
+      web: () => Promise.resolve().then(() => (init_web2(), web_exports2)).then((m) => new m.PreferencesWeb())
+    });
+    init_dist();
+    var App2 = registerPlugin2("App", {
+      web: () => Promise.resolve().then(() => (init_web3(), web_exports3)).then((m) => new m.AppWeb())
+    });
+    var Share2 = registerPlugin2("Share");
+    window.StocklabCapacitor = { Capacitor: Capacitor2, CapacitorHttp: CapacitorHttp2, registerPlugin: registerPlugin2, Preferences: Preferences2, Filesystem: Filesystem2, Directory: Directory2, Encoding: Encoding2, App: App2, Share: Share2 };
+  })();
 
-  // node_modules/@capacitor/filesystem/dist/esm/index.js
-  init_definitions();
-  var Filesystem = registerPlugin("Filesystem", {
-    web: () => Promise.resolve().then(() => (init_web(), web_exports)).then((m) => new m.FilesystemWeb())
-  });
-  f();
-
-  // node_modules/@capacitor/preferences/dist/esm/index.js
-  init_dist();
-  var Preferences = registerPlugin("Preferences", {
-    web: () => Promise.resolve().then(() => (init_web2(), web_exports2)).then((m) => new m.PreferencesWeb())
-  });
-
-  // node_modules/@capacitor/app/dist/esm/index.js
-  init_dist();
-  var App = registerPlugin("App", {
-    web: () => Promise.resolve().then(() => (init_web3(), web_exports3)).then((m) => new m.AppWeb())
-  });
-  var Share = registerPlugin("Share");
-
-  // src/finmind.mjs
+  // mobile/src/finmind.mjs
   init_core();
   var API = "https://api.finmindtrade.com/api/v4/data";
   var DataRequestError = class extends Error {
+    constructor(message, status2 = null) {
+      super(message);
+      this.name = "DataRequestError";
+      this.status = status2;
+    }
   };
-  var number = (value) => value === null || value === void 0 || value === "" ? null : Number(value);
-  var pause = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
+  var number = numeric;
+  var pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  var RETRYABLE = /* @__PURE__ */ new Set([500, 502, 503, 504]);
+  var DAY = 864e5;
+  var apiMessage = (status2) => ({
+    401: "Token \u7121\u6548\u6216\u672A\u6388\u6B0A",
+    402: "API \u984D\u5EA6\u5DF2\u9054\u4E0A\u9650",
+    403: "\u6B0A\u9650\u4E0D\u8DB3\u6216 IP \u88AB\u9650\u5236",
+    429: "\u8ACB\u6C42\u904E\u65BC\u983B\u7E41",
+    500: "FinMind \u670D\u52D9\u66AB\u6642\u7570\u5E38\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66",
+    502: "FinMind \u670D\u52D9\u66AB\u6642\u7570\u5E38\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66",
+    503: "FinMind \u670D\u52D9\u66AB\u6642\u7570\u5E38\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66",
+    504: "FinMind \u670D\u52D9\u66AB\u6642\u7570\u5E38\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66"
+  })[status2] || `FinMind \u56DE\u61C9 ${status2 || "\u683C\u5F0F\u932F\u8AA4"}\uFF0C\u8ACB\u78BA\u8A8D\u67E5\u8A62\u689D\u4EF6`;
+  var iso = (date) => date.toISOString().slice(0, 10);
+  function ranges(start, end) {
+    const result = [];
+    for (let cursor = /* @__PURE__ */ new Date(start + "T00:00:00Z"), last = /* @__PURE__ */ new Date(end + "T00:00:00Z"); cursor <= last; ) {
+      const finish = new Date(Math.min(last.getTime(), cursor.getTime() + 364 * DAY));
+      result.push([iso(cursor), iso(finish)]);
+      cursor = new Date(finish.getTime() + DAY);
+    }
+    return result;
+  }
   function checkQuery(ids, start, end) {
     const unique = [...new Set(ids.map((id) => String(id).trim()))];
     if (!unique.length || unique.length > 10 || unique.some((id) => !/^[0-9A-Za-z]{4,8}$/.test(id)))
@@ -2133,16 +2111,16 @@
     } }) {
       ids = checkQuery(ids, start, end);
       const warnings = [];
-      async function get(dataset, sid) {
+      async function requestRange(dataset, sid, rangeStart = start, rangeEnd = end) {
         const params2 = { dataset };
-        if (sid) Object.assign(params2, { data_id: sid, start_date: start, end_date: end });
+        if (sid) Object.assign(params2, { data_id: sid, start_date: rangeStart, end_date: rangeEnd });
         const headers = token ? { Authorization: "Bearer " + token } : {};
         for (let attempt = 0; attempt < 3; attempt++) {
           let response;
           try {
             response = await request({ url: API, params: params2, headers, connectTimeout: 2e4, readTimeout: 45e3, responseType: "json" });
           } catch {
-            throw new DataRequestError(`${dataset} \u9023\u7DDA\u5931\u6557\u3002\u8ACB\u78BA\u8A8D\u624B\u6A5F\u7DB2\u8DEF\u5F8C\u518D\u8A66\uFF1B\u4E0A\u6B21\u4FDD\u5B58\u7684\u8CC7\u6599\u4ECD\u4FDD\u7559\u3002`);
+            throw new DataRequestError(`${dataset} \u9023\u7DDA\u5931\u6557\u3002\u8ACB\u78BA\u8A8D\u7DB2\u8DEF\u5F8C\u518D\u8A66\uFF1B\u4E0A\u6B21\u4FDD\u5B58\u7684\u8CC7\u6599\u4ECD\u4FDD\u7559\u3002`);
           }
           const body = typeof response.data === "string" ? (() => {
             try {
@@ -2152,14 +2130,28 @@
             }
           })() : response.data;
           const status2 = response.status === 200 ? body?.status : response.status;
-          if ([429, 500, 502, 503, 504].includes(status2) && attempt < 2) {
+          if (RETRYABLE.has(status2) && attempt < 2) {
             await sleep(1e3 * 2 ** attempt);
             continue;
           }
           if (response.status !== 200 || body?.status !== 200 || !Array.isArray(body.data))
-            throw new DataRequestError(`${dataset} \u56DE\u61C9 ${status2 || "\u683C\u5F0F\u932F\u8AA4"}\u3002\u8ACB\u6AA2\u67E5 FinMind Token\u3001\u6B0A\u9650\u8207\u984D\u5EA6\uFF0C\u6216\u7A0D\u5F8C\u91CD\u8A66\u3002`);
+            throw new DataRequestError(`${dataset}\uFF1A${apiMessage(status2)}`, status2);
           await sleep(250);
           return body.data;
+        }
+      }
+      async function get(dataset, sid) {
+        try {
+          return await requestRange(dataset, sid);
+        } catch (e) {
+          const span = Math.floor((Date.parse(end) - Date.parse(start)) / DAY) + 1;
+          if (dataset !== "TaiwanStockPrice" || !sid || !(e instanceof DataRequestError) || !RETRYABLE.has(e.status) || span <= 365) throw e;
+          const merged = [];
+          for (const [partStart, partEnd] of ranges(start, end)) {
+            onProgress(`${sid} \xB7 \u65E5\u80A1\u50F9\u5206\u6BB5\u67E5\u8A62 ${partStart}\u2013${partEnd}`);
+            merged.push(...await requestRange(dataset, sid, partStart, partEnd));
+          }
+          return merged;
         }
       }
       onProgress("\u6B63\u5728\u67E5\u8A62\u80A1\u7968\u57FA\u672C\u8CC7\u6599\u2026");
@@ -2219,10 +2211,6 @@
         const bars = [];
         for (const row of [...prices].sort((a, b) => a.date.localeCompare(b.date))) {
           const close = number(row.close), open = number(row.open), high = number(row.max), low = number(row.min);
-          if (![close, open, high, low].every((value) => Number.isFinite(value) && value > 0)) {
-            warnings.push(`${sid} ${row.date} \u7121\u6709\u6548 OHLC\uFF0C\u5DF2\u6392\u9664\u3002`);
-            continue;
-          }
           const day = chip.get(row.date) || /* @__PURE__ */ new Map(), pe = per.get(row.date) || {}, adjusted = number(adj.get(row.date)?.close);
           const dealerKeys = ["Dealer", "Dealer_self", "Dealer_Hedging"].filter((key) => day.has(key));
           const dealer = dealerKeys.length && dealerKeys.every((key) => Number.isFinite(day.get(key))) ? dealerKeys.reduce((total, key) => total + day.get(key), 0) : null;
@@ -2246,7 +2234,7 @@
         const meta = info.get(sid) || {};
         stocks.push({ id: sid, name: meta.stock_name || sid, sector: meta.industry_category || "\u672A\u5206\u985E", market: meta.type || "", bars, financials });
       }
-      return validate({
+      return prepareBundle({
         schema_version: 1,
         mode: "real",
         source: "FinMind v4\uFF08Android\uFF09",
@@ -2267,7 +2255,7 @@
     };
   }
 
-  // src/storage.mjs
+  // mobile/src/storage.mjs
   init_core();
   function createSnapshotStore({ read, write, getSlot, setSlot }) {
     let serial = Promise.resolve();
@@ -2279,7 +2267,7 @@
           const raw = await read(`market.${candidate}.json`);
           if (raw === null) continue;
           try {
-            return { bundle: validate(JSON.parse(raw)), recovered: damaged };
+            return { bundle: prepareBundle(JSON.parse(raw)), recovered: damaged };
           } catch {
             damaged = true;
           }
@@ -2287,7 +2275,7 @@
         return { bundle: null, recovered: false, damaged };
       },
       save(bundle2) {
-        validate(bundle2);
+        validate(bundle2, { allowEmpty: true });
         const text = JSON.stringify(bundle2);
         if (new TextEncoder().encode(text).byteLength > 20 * 1024 * 1024) return Promise.reject(Error("\u8CC7\u6599\u8D85\u904E\u624B\u6A5F\u7248 20 MB \u5132\u5B58\u4E0A\u9650\u3002"));
         const task = serial.catch(() => {
@@ -2302,68 +2290,352 @@
     };
   }
 
-  // src/main.js
-  var TOKEN_KEY = "twlab.finmind.token";
+  // pwa/src/scanner-analysis.mjs
+  init_core();
+  function bigDataAnalysis(stock, threshold = 5) {
+    const bs = stock.bars, n = bs.length;
+    const sma = (i, w, key = "close") => i >= w - 1 ? bs.slice(i - w + 1, i + 1).reduce((a, x) => a + x[key], 0) / w : null;
+    const rsi = Array(n).fill(null);
+    let gain = 0, loss = 0;
+    for (let i = 1; i < n; i++) {
+      const ch = bs[i].close - bs[i - 1].close, g = Math.max(ch, 0), l = Math.max(-ch, 0);
+      if (i <= 14) {
+        gain += g;
+        loss += l;
+        if (i === 14) {
+          gain /= 14;
+          loss /= 14;
+          rsi[i] = loss === 0 ? gain === 0 ? 50 : 100 : 100 - 100 / (1 + gain / loss);
+        }
+      } else {
+        gain = (gain * 13 + g) / 14;
+        loss = (loss * 13 + l) / 14;
+        rsi[i] = loss === 0 ? gain === 0 ? 50 : 100 : 100 - 100 / (1 + gain / loss);
+      }
+    }
+    const inds = indicators(bs);
+    const stateAt = (i) => {
+      const ma20 = sma(i, 20), ma60 = sma(i, 60), vol20 = sma(i, 20, "volume");
+      const prev20 = i >= 20 ? Math.max(...bs.slice(i - 20, i).map((x) => x.high)) : null;
+      const ins = (isNum(bs[i].trust) ? bs[i].trust : 0) + (isNum(bs[i].foreign) ? bs[i].foreign : 0);
+      return [
+        { key: "above_ma20", label: "\u80A1\u50F9\u7AD9\u4E0A 20 \u65E5\u5747\u7DDA", on: isNum(ma20) && bs[i].close > ma20 },
+        { key: "ma20_above_ma60", label: "20 \u65E5\u5747\u7DDA\u9AD8\u65BC 60 \u65E5\u5747\u7DDA", on: isNum(ma20) && isNum(ma60) && ma20 > ma60 },
+        { key: "macd_positive", label: "MACD \u52D5\u80FD\u504F\u591A\uFF08DIF > DEA\uFF09", on: isNum(inds[i]?.dif) && isNum(inds[i]?.dea) && inds[i].dif > inds[i].dea },
+        { key: "volume_expand", label: "\u6210\u4EA4\u91CF\u9AD8\u65BC 20 \u65E5\u5747\u91CF 10%", on: isNum(vol20) && bs[i].volume > vol20 * 1.1 },
+        { key: "breakout20", label: "\u6536\u76E4\u7A81\u7834\u524D 20 \u65E5\u6700\u9AD8\u50F9", on: isNum(prev20) && bs[i].close > prev20 },
+        { key: "institutional_buy", label: "\u5916\u8CC7\uFF0B\u6295\u4FE1\u7576\u65E5\u5408\u8A08\u8CB7\u8D85", on: isNum(bs[i].trust) && isNum(bs[i].foreign) && ins > 0 },
+        { key: "rsi_zone", label: "RSI(14) \u4F4D\u65BC 50\u201375 \u591A\u982D\u5340", on: isNum(rsi[i]) && rsi[i] >= 50 && rsi[i] <= 75 }
+      ];
+    };
+    if (n < 81) return { conditions: [], score: 0, matches: [], horizons: [], insufficient: true, reason: "\u81F3\u5C11\u9700\u8981\u7D04 81 \u7B46\u65E5\u8CC7\u6599\u624D\u80FD\u5EFA\u7ACB 60 \u65E5\u5747\u7DDA\u8207\u6B77\u53F2\u6A23\u672C\u3002" };
+    const current = stateAt(n - 1), currentOn = current.filter((x) => x.on).map((x) => x.key), score = currentOn.length;
+    const horizons = [5, 10, 20, 60], matches = [];
+    for (let i = 60; i < n - 5; i++) {
+      const s = stateAt(i);
+      const same = s.reduce((a, x) => a + (x.on === current.find((c) => c.key === x.key).on ? 1 : 0), 0);
+      const bullishSame = s.reduce((a, x) => a + (x.on && current.find((c) => c.key === x.key).on ? 1 : 0), 0);
+      if (same >= threshold && bullishSame >= Math.max(2, currentOn.length - 3)) matches.push({ i, date: bs[i].date, close: bs[i].close, same, bullishSame });
+    }
+    const stats = horizons.map((h) => {
+      const rows = matches.filter((m) => m.i + h < n).map((m) => {
+        const ret = bs[m.i + h].close / bs[m.i].close - 1;
+        const path = bs.slice(m.i + 1, m.i + h + 1).map((x) => x.close / bs[m.i].close - 1);
+        return { date: m.date, ret, mae: path.length ? Math.min(0, ...path) : null, mfe: path.length ? Math.max(0, ...path) : null };
+      });
+      const rets = rows.map((x) => x.ret).sort((a, b) => a - b), avg = rets.length ? rets.reduce((a, x) => a + x, 0) / rets.length : null;
+      const median = rets.length ? rets.length % 2 ? rets[(rets.length - 1) / 2] : (rets[rets.length / 2 - 1] + rets[rets.length / 2]) / 2 : null;
+      const positives = rets.filter((x) => x > 0), negatives = rets.filter((x) => x <= 0);
+      const avgWin = positives.length ? positives.reduce((a, x) => a + x, 0) / positives.length : null;
+      const avgLoss = negatives.length ? negatives.reduce((a, x) => a + x, 0) / negatives.length : null;
+      return { days: h, count: rows.length, up_rate: rets.length ? positives.length / rets.length : null, mean: avg, median, best: rets.at(-1) ?? null, worst: rets[0] ?? null, avg_win: avgWin, avg_loss: avgLoss, payoff: isNum(avgWin) && isNum(avgLoss) && avgLoss !== 0 ? avgWin / Math.abs(avgLoss) : null, avg_mae: rows.length ? rows.reduce((a, x) => a + (x.mae ?? 0), 0) / rows.length : null, avg_mfe: rows.length ? rows.reduce((a, x) => a + (x.mfe ?? 0), 0) / rows.length : null, rows };
+    });
+    return { conditions: current, score, matches, horizons: stats, insufficient: false };
+  }
+
+  // pwa/src/scanner-ui.js
+  init_core();
+  function createScannerUI({ getBundle, selected: selected2, selectStock, go: go2, esc: esc2, fmt: fmt2, pct: pct2, isNum: isNum2, metric: metric2, table: table2, csv: csv2 }) {
+    const $2 = (id) => document.getElementById(id);
+    if (!$2("scanner")) return null;
+    let bundle2, stockId2;
+    const cache = /* @__PURE__ */ new WeakMap();
+    const analyze = (stock, threshold) => {
+      let values = cache.get(stock);
+      if (!values) {
+        values = /* @__PURE__ */ new Map();
+        cache.set(stock, values);
+      }
+      if (!values.has(threshold)) values.set(threshold, bigDataAnalysis(stock, threshold));
+      return values.get(threshold);
+    };
+    function renderBigData() {
+      const threshold = Number($2("similarity-threshold")?.value || 5), minSamples = Number($2("minimum-samples")?.value || 30), a = analyze(selected2(), threshold);
+      $2("export-bigdata").disabled = a.insufficient;
+      if (a.insufficient) {
+        $2("bigdata-summary").textContent = a.reason;
+        $2("bigdata-current").innerHTML = '<div class="panel empty">' + esc2(a.reason) + "</div>";
+        $2("bigdata-horizons").innerHTML = "";
+        $2("bigdata-conditions").innerHTML = "";
+        return;
+      }
+      const label = a.score >= 6 ? "\u689D\u4EF6\u504F\u5F37" : a.score >= 4 ? "\u689D\u4EF6\u504F\u591A" : a.score >= 2 ? "\u591A\u7A7A\u6DF7\u5408" : "\u591A\u982D\u689D\u4EF6\u504F\u5C11";
+      $2("bigdata-current").innerHTML = '<div class="metrics">' + metric2("\u76EE\u524D\u7B26\u5408\u591A\u982D\u689D\u4EF6", a.score + " / 7", label) + metric2("\u6B77\u53F2\u76F8\u4F3C\u65E5", String(a.matches.length), "\u4F9D\u76EE\u524D\u689D\u4EF6\u7D44\u5408\u641C\u5C0B") + metric2("\u8CC7\u6599\u9577\u5EA6", String(selected2().bars.length), "\u65E5\u7DDA\u7B46\u6578") + metric2("\u6700\u65B0\u8CC7\u6599\u65E5", selected2().bars.at(-1).date, selected2().id + " " + (selected2().name || "")) + "</div>";
+      $2("bigdata-summary").textContent = a.matches.length < minSamples ? "\u76F8\u4F3C\u6A23\u672C " + a.matches.length + " \u6B21\uFF0C\u4F4E\u65BC\u4F60\u8A2D\u5B9A\u7684 " + minSamples + " \u6B21\uFF1B\u7D50\u679C\u5BB9\u6613\u53D7\u5C11\u6578\u4E8B\u4EF6\u5F71\u97FF\u3002" : "\u76F8\u4F3C\u6A23\u672C " + a.matches.length + " \u6B21\uFF1B\u8ACB\u540C\u6642\u770B\u4E0A\u6F32\u6BD4\u4F8B\u3001\u5E73\u5747/\u4E2D\u4F4D\u6578\u5831\u916C\u8207\u6700\u5DEE\u6848\u4F8B\u3002";
+      $2("bigdata-horizons").innerHTML = table2(["\u89C0\u5BDF\u671F", "\u6709\u6548\u6A23\u672C", "\u4E0A\u6F32\u6BD4\u4F8B", "\u5E73\u5747\u5831\u916C", "\u4E2D\u4F4D\u6578", "\u5E73\u5747\u76C8\u8667\u6BD4", "\u5E73\u5747\u671F\u9593\u6700\u5927\u4E0D\u5229\u8B8A\u52D5", "\u6700\u5DEE\u7D50\u679C"], a.horizons.map((x) => [x.days + " \u65E5", x.count, pct2(x.up_rate), pct2(x.mean), pct2(x.median), isNum2(x.payoff) ? fmt2(x.payoff, 2) + "x" : "\u2014", pct2(x.avg_mae), pct2(x.worst)]));
+      $2("bigdata-conditions").innerHTML = '<div class="condition-grid">' + a.conditions.map((x) => '<div class="condition-item ' + (x.on ? "on" : "off") + '"><b>' + (x.on ? "\u2713" : "\u2014") + "</b><span>" + esc2(x.label) + "</span></div>").join("") + "</div>";
+      $2("export-bigdata").onclick = () => csv2(stockId2 + "_bigdata_" + selected2().bars.at(-1).date + ".csv", ["horizon_days", "samples", "up_rate", "mean_return", "median_return", "avg_win", "avg_loss", "payoff_ratio", "avg_mae", "avg_mfe", "worst", "best"], a.horizons.map((x) => [x.days, x.count, x.up_rate, x.mean, x.median, x.avg_win, x.avg_loss, x.payoff, x.avg_mae, x.avg_mfe, x.worst, x.best]));
+    }
+    function scannerRows() {
+      const horizon = Number($2("scan-horizon")?.value || 20);
+      const threshold = Number($2("scan-threshold")?.value || 5);
+      const minSamples = Number($2("scan-min-samples")?.value || 30);
+      const minScore = Number($2("scan-min-score")?.value || 3);
+      const onlyQualified = !!$2("scan-only-qualified")?.checked;
+      const rows = [];
+      for (const stock of bundle2.stocks) {
+        const a = analyze(stock, threshold);
+        if (a.insufficient) continue;
+        const h = a.horizons.find((x) => x.days === horizon);
+        if (!h || !h.count || a.score < minScore) continue;
+        const qualified = h.count >= minSamples;
+        if (onlyQualified && !qualified) continue;
+        const confidence = !qualified ? "\u4F4E" : h.count >= 100 ? "\u9AD8" : "\u4E2D";
+        rows.push({ stock, a, h, qualified, confidence });
+      }
+      rows.sort((x, y) => {
+        const ux = isNum2(x.h.up_rate) ? x.h.up_rate : -1, uy = isNum2(y.h.up_rate) ? y.h.up_rate : -1;
+        if (uy !== ux) return uy - ux;
+        const mx = isNum2(x.h.median) ? x.h.median : -99, my = isNum2(y.h.median) ? y.h.median : -99;
+        if (my !== mx) return my - mx;
+        return y.h.count - x.h.count;
+      });
+      return { rows, horizon, threshold, minSamples, minScore, onlyQualified };
+    }
+    function renderScanner() {
+      if (!$2("scanner-table")) return;
+      const r = scannerRows();
+      const total = bundle2.stocks.length, shown = r.rows.length;
+      const qualified = r.rows.filter((x) => x.qualified).length;
+      $2("scanner-summary").innerHTML = '<div class="metrics">' + metric2("\u5DF2\u8F09\u5165\u80A1\u7968", String(total), "\u76EE\u524D\u6279\u6B21\u8CC7\u6599") + metric2("\u986F\u793A\u6A19\u7684", String(shown), "\u7B26\u5408\u76EE\u524D\u7BE9\u9078") + metric2("\u9054\u6A23\u672C\u9580\u6ABB", String(qualified), "\u6709\u6548\u6A23\u672C \u2265 " + r.minSamples) + metric2("\u89C0\u5BDF\u671F", r.horizon + " \u65E5", "\u6B77\u53F2\u76F8\u4F3C\u689D\u4EF6\u5F8C") + "</div>";
+      $2("scanner-note").textContent = shown ? "\u4F9D\u300C\u4E0A\u6F32\u6BD4\u4F8B\u300D\u7531\u9AD8\u5230\u4F4E\u6392\u5217\uFF1B\u540C\u503C\u6642\u518D\u6BD4\u8F03\u4E2D\u4F4D\u6578\u5831\u916C\u8207\u6A23\u672C\u6578\u3002\u9019\u662F\u7814\u7A76\u6392\u5E8F\uFF0C\u4E0D\u662F\u8CB7\u9032\u6392\u540D\u3002" : "\u76EE\u524D\u6C92\u6709\u80A1\u7968\u7B26\u5408\u7BE9\u9078\u689D\u4EF6\uFF1B\u8ACB\u78BA\u8A8D\u6BCF\u6A94\u81F3\u5C11\u6709 81 \u7B46\u65E5\u8CC7\u6599\uFF0C\u6216\u964D\u4F4E\u591A\u982D\u689D\u4EF6\u8207\u6A23\u672C\u9580\u6ABB\u3002";
+      $2("export-scanner").disabled = !shown;
+      if (!shown) {
+        $2("scanner-table").innerHTML = '<div class="empty">\u6C92\u6709\u7B26\u5408\u76EE\u524D\u689D\u4EF6\u7684\u6A19\u7684\u3002</div>';
+        return;
+      }
+      const rows = r.rows.map((x, i) => [
+        '<span class="scanner-rank">' + (i + 1) + "</span>",
+        esc2(x.stock.id + " " + (x.stock.name || "")),
+        x.a.score + " / 7",
+        x.h.count,
+        pct2(x.h.up_rate),
+        pct2(x.h.mean),
+        pct2(x.h.median),
+        isNum2(x.h.payoff) ? fmt2(x.h.payoff, 2) + "x" : "\u2014",
+        pct2(x.h.avg_mae),
+        '<span class="confidence ' + (x.confidence === "\u9AD8" ? "high" : x.confidence === "\u4F4E" ? "low" : "") + '">' + x.confidence + "</span>",
+        '<button class="scan-open" data-scan-stock="' + esc2(x.stock.id) + '">\u67E5\u770B</button>'
+      ]);
+      $2("scanner-table").innerHTML = table2(["#", "\u80A1\u7968", "\u76EE\u524D\u591A\u982D\u689D\u4EF6", "\u6709\u6548\u6A23\u672C", "\u4E0A\u6F32\u6BD4\u4F8B", "\u5E73\u5747\u5831\u916C", "\u4E2D\u4F4D\u6578", "\u76C8\u8667\u6BD4", "\u5E73\u5747\u6700\u5927\u4E0D\u5229\u8B8A\u52D5", "\u6A23\u672C\u91CF", "\u8A73\u7D30"], rows);
+      $2("scanner-table").onclick = (e) => {
+        const b = e.target.closest("[data-scan-stock]");
+        if (!b) return;
+        selectStock(b.dataset.scanStock);
+        go2("bigdata");
+      };
+      $2("export-scanner").onclick = () => csv2("stocklab_scanner_" + r.horizon + "d.csv", ["rank", "stock_id", "name", "current_bullish_conditions", "samples", "up_rate", "mean_return", "median_return", "payoff_ratio", "avg_mae", "sample_size_level"], r.rows.map((x, i) => [i + 1, x.stock.id, x.stock.name || "", x.a.score, x.h.count, x.h.up_rate, x.h.mean, x.h.median, x.h.payoff, x.h.avg_mae, x.confidence]));
+    }
+    function buildChatGPTPrompt() {
+      const stock = selected2(), bars = stock.bars, latest = bars.at(-1), previous = bars.at(-2), now = indicators(bars).at(-1) || {};
+      const average = (window2, key = "close") => bars.length >= window2 ? bars.slice(-window2).reduce((sum, row) => sum + (isNum2(row[key]) ? row[key] : 0), 0) / window2 : null;
+      const analysis = analyze(stock, Number($2("similarity-threshold")?.value || 5));
+      const financials = [...stock.financials || []].sort((a, b) => a.date.localeCompare(b.date)).slice(-8);
+      const financialLines = financials.length ? financials.map((row) => {
+        const gross = row.revenue > 0 && isNum2(row.gross_profit) ? row.gross_profit / row.revenue : null;
+        const operating = row.revenue > 0 && isNum2(row.operating_income) ? row.operating_income / row.revenue : null;
+        return `- ${row.date}\uFF1A\u71DF\u6536 ${fmt2(isNum2(row.revenue) ? row.revenue / 1e8 : null)} \u5104\u3001\u6BDB\u5229\u7387 ${pct2(gross)}\u3001\u71DF\u76CA\u7387 ${pct2(operating)}\u3001EPS ${fmt2(row.eps)}`;
+      }).join("\n") : "- \u76EE\u524D\u8CC7\u6599\u6C92\u6709\u8CA1\u5831\u6B04\u4F4D";
+      const conditionLines = analysis.insufficient ? `- ${analysis.reason}` : analysis.conditions.map((item) => `- ${item.on ? "\u7B26\u5408" : "\u672A\u7B26\u5408"}\uFF1A${item.label}`).join("\n");
+      const horizonLines = analysis.insufficient ? "- \u6A23\u672C\u4E0D\u8DB3" : analysis.horizons.map((item) => `- ${item.days} \u65E5\uFF1A\u6709\u6548\u6A23\u672C ${item.count}\u3001\u6B77\u53F2\u4E0A\u6F32\u6BD4\u4F8B ${pct2(item.up_rate)}\u3001\u5E73\u5747\u5831\u916C ${pct2(item.mean)}\u3001\u4E2D\u4F4D\u6578 ${pct2(item.median)}\u3001\u76C8\u8667\u6BD4 ${isNum2(item.payoff) ? fmt2(item.payoff, 2) + "x" : "\u2014"}\u3001\u5E73\u5747\u6700\u5927\u4E0D\u5229\u8B8A\u52D5 ${pct2(item.avg_mae)}`).join("\n");
+      const institutional = (key) => isNum2(latest[key]) ? fmt2(latest[key] / 1e3, 0) + " \u5F35" : "\u7F3A\u503C";
+      const change = previous ? latest.close / previous.close - 1 : null, volume20 = average(20, "volume");
+      return `\u3010\u5206\u6790\u6A21\u5F0F\u3011\u9019\u662F\u4E00\u4EFD\u5B8C\u6574\u500B\u80A1\u7814\u7A76\uFF0C\u5EFA\u8B70\u4F7F\u7528 ChatGPT \u7684 High \u63A8\u7406\u5F37\u5EA6\u3002\u82E5\u76EE\u524D\u4E0D\u662F High\uFF0C\u8ACB\u4ECD\u5B8C\u6210\u5206\u6790\uFF0C\u4F46\u512A\u5148\u91CD\u8996\u8CC7\u6599\u67E5\u8B49\u3001\u4EA4\u53C9\u9A57\u8B49\u8207\u4E0D\u78BA\u5B9A\u6027\u3002
+
+\u8ACB\u4EE5\u53F0\u80A1\u7814\u7A76\u5206\u6790\u5E2B\u7684\u89D2\u5EA6\uFF0C\u5206\u6790\u4EE5\u4E0B\u80A1\u7968\u3002\u8ACB\u4F7F\u7528\u7E41\u9AD4\u4E2D\u6587\uFF0C\u4E26\u5C07\u300C\u5DF2\u77E5\u4E8B\u5BE6\u300D\u3001\u300C\u8CC7\u6599\u63A8\u8AD6\u300D\u3001\u300C\u5E02\u5834\u9810\u671F\u300D\u6E05\u695A\u5206\u958B\u3002\u4E0D\u8981\u628A\u4EFB\u4F55\u55AE\u4E00\u6307\u6A19\u8996\u70BA\u4FDD\u8B49\uFF0C\u4E5F\u4E0D\u8981\u53EA\u7D66\u8CB7\u9032\uFF0F\u8CE3\u51FA\u7D50\u8AD6\u3002\u82E5\u9700\u8981\u6700\u65B0\u65B0\u805E\u3001\u6CD5\u8AAA\u6703\u3001\u7522\u696D\u6D88\u606F\u6216\u7E3D\u9AD4\u8CC7\u6599\uFF0C\u8ACB\u5148\u4E0A\u7DB2\u67E5\u8B49\u4E26\u9644\u4F86\u6E90\u8207\u65E5\u671F\u3002
+
+\u3010\u6A19\u7684\u3011
+${stock.id} ${stock.name || ""}
+\u7522\u696D\uFF1A${stock.sector || "\u672A\u5206\u985E"}
+\u672C\u6A5F\u8CC7\u6599\u4F86\u6E90\uFF1A${bundle2.source || "\u4F7F\u7528\u8005\u532F\u5165"}
+\u8CC7\u6599\u6293\u53D6\u6642\u9593\uFF1A${bundle2.fetched_at || "\u672A\u63D0\u4F9B"}
+\u884C\u60C5\u622A\u6B62\u65E5\uFF1A${latest.date}
+
+\u3010\u76EE\u524D\u884C\u60C5\u3011
+- \u6536\u76E4\u50F9\uFF1A${fmt2(latest.close)} \u5143
+- \u55AE\u65E5\u6F32\u8DCC\uFF1A${pct2(change)}
+- \u6210\u4EA4\u91CF\uFF1A${fmt2(latest.volume / 1e3, 0)} \u5F35
+- 20 \u65E5\u5747\u91CF\uFF1A${isNum2(volume20) ? fmt2(volume20 / 1e3, 0) + " \u5F35" : "\u2014"}
+- \u672C\u76CA\u6BD4\uFF1A${isNum2(latest.pe) && latest.pe > 0 ? fmt2(latest.pe) + " \u500D" : "\u7F3A\u503C\u6216\u975E\u6B63"}
+
+\u3010\u6280\u8853\u9762\u3011
+- MA20\uFF1A${fmt2(average(20))}
+- MA60\uFF1A${fmt2(average(60))}
+- MA120\uFF1A${fmt2(average(120))}
+- MACD DIF\uFF1A${fmt2(now.dif, 3)}
+- MACD DEA\uFF1A${fmt2(now.dea, 3)}
+- MACD \u67F1\u72C0\u503C\uFF1A${fmt2(now.macd, 3)}
+- KD K\uFF1A${fmt2(now.k, 2)}
+- KD D\uFF1A${fmt2(now.d, 2)}
+
+\u3010\u6CD5\u4EBA\u7576\u65E5\u8CB7\u8CE3\u8D85\u3011
+- \u5916\u8CC7\uFF1A${institutional("foreign")}
+- \u6295\u4FE1\uFF1A${institutional("trust")}
+- \u81EA\u71DF\u5546\uFF1A${institutional("dealer")}
+
+\u3010\u76EE\u524D 7 \u9805\u591A\u982D\u689D\u4EF6\u3011
+${conditionLines}
+
+\u3010\u6B77\u53F2\u76F8\u4F3C\u689D\u4EF6\u7D71\u8A08\u3011
+${horizonLines}
+
+\u3010\u8FD1\u516B\u671F\u8CA1\u52D9\u6458\u8981\u3011
+${financialLines}
+
+\u8ACB\u4F9D\u5E8F\u5B8C\u6210\u4EE5\u4E0B\u5206\u6790\uFF1A
+1. \u57FA\u672C\u9762\uFF1A\u71DF\u6536\u3001\u7372\u5229\u7387\u3001EPS\u3001\u4F30\u503C\u8207\u7522\u696D\u4F4D\u7F6E\uFF1B\u6307\u51FA\u8CC7\u6599\u4E0D\u8DB3\u8655\u3002
+2. \u6280\u8853\u9762\uFF1A\u65E5\u7DDA\uFF0F\u4E2D\u671F\u8DA8\u52E2\u3001\u5747\u7DDA\u3001MACD\u3001KD\u3001\u91CF\u50F9\uFF0C\u63D0\u51FA\u4E3B\u8981\u652F\u6490\u8207\u58D3\u529B\u5340\u3002
+3. \u7C4C\u78BC\u9762\uFF1A\u89E3\u8B80\u5916\u8CC7\u3001\u6295\u4FE1\u3001\u81EA\u71DF\u5546\u76EE\u524D\u8A0A\u865F\uFF0C\u4F46\u4E0D\u8981\u628A\u55AE\u65E5\u6CD5\u4EBA\u6578\u64DA\u904E\u5EA6\u89E3\u8B80\u3002
+4. \u5927\u6578\u64DA\uFF1A\u89E3\u8B80\u6B77\u53F2\u76F8\u4F3C\u689D\u4EF6\u7684\u6A23\u672C\u6578\u3001\u4E0A\u6F32\u6BD4\u4F8B\u3001\u5E73\u5747\uFF0F\u4E2D\u4F4D\u6578\u3001\u76C8\u8667\u6BD4\u8207\u6700\u5927\u4E0D\u5229\u8B8A\u52D5\uFF0C\u63D0\u9192\u6A23\u672C\u504F\u8AA4\u8207\u975E\u9810\u6E2C\u6027\u3002
+5. \u5E02\u5834\u6B63\u5728\u5B9A\u50F9\u4EC0\u9EBC\uFF1A\u54EA\u4E9B\u5229\u591A\uFF0F\u5229\u7A7A\u53EF\u80FD\u5DF2\u53CD\u6620\uFF0C\u54EA\u4E9B\u53EF\u80FD\u5F62\u6210\u9810\u671F\u5DEE\u3002
+6. \u6700\u65B0\u65B0\u805E\u8207\u50AC\u5316\u56E0\u7D20\uFF1A\u641C\u5C0B\u8FD1\u671F\u91CD\u8981\u65B0\u805E\u3001\u6CD5\u8AAA\u3001\u6708\u71DF\u6536\u3001\u7522\u696D\u5831\u50F9\u3001\u653F\u7B56\u3001\u532F\u7387\u7B49\uFF0C\u6A19\u793A\u4F86\u6E90\u8207\u65E5\u671F\u3002
+7. \u5EFA\u7ACB\u591A\u982D\u3001\u4E2D\u6027\u9707\u76EA\u3001\u7A7A\u982D\u4E09\u7A2E\u60C5\u5883\uFF0C\u5404\u81EA\u5217\u51FA\u6210\u7ACB\u689D\u4EF6\u3001\u5931\u6548\u689D\u4EF6\u8207\u9700\u8981\u89C0\u5BDF\u7684\u50F9\u4F4D\uFF0F\u4E8B\u4EF6\u3002
+8. \u5217\u51FA 5 \u500B\u4E3B\u8981\u98A8\u96AA\u8207\u672A\u4F86 3\uFF5E6 \u500B\u6708\u503C\u5F97\u8FFD\u8E64\u7684\u50AC\u5316\u4E8B\u4EF6\u3002
+9. \u6700\u5F8C\u505A\u4E00\u500B\u7C21\u6F54\u5100\u8868\u677F\uFF0C\u5206\u6210\u57FA\u672C\u9762\u3001\u6280\u8853\u9762\u3001\u7C4C\u78BC\u9762\u3001\u7522\u696D\u9762\u3001\u65B0\u805E\u9762\u3001\u98A8\u96AA\uFF0C\u8AAA\u660E\u76EE\u524D\u652F\u6301\u591A\u65B9\u8207\u652F\u6301\u7A7A\u65B9\u7684\u8B49\u64DA\u3002
+
+\u91CD\u8981\uFF1A\u672C\u6A5F\u63D0\u4F9B\u7684\u662F\u6B77\u53F2\u8CC7\u6599\u6458\u8981\uFF0C\u4E0D\u4EE3\u8868\u5373\u6642\u884C\u60C5\u3002\u8ACB\u628A\u6700\u65B0\u5916\u90E8\u8CC7\u6599\u8207\u672C\u6A5F\u622A\u6B62\u65E5\u5206\u958B\u8AAA\u660E\u3002`;
+    }
+    async function copyChatGPTPrompt() {
+      const text = buildChatGPTPrompt();
+      if (window.StocklabMobile?.copyText) {
+        await window.StocklabMobile.copyText(text);
+        $2("mobile-status").textContent = "\u5DF2\u8907\u88FD ChatGPT \u5206\u6790\u5167\u5BB9\u3002";
+        return;
+      }
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      else {
+        const area = document.createElement("textarea");
+        area.value = text;
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand("copy");
+        area.remove();
+      }
+      $2("mobile-status").textContent = "\u5DF2\u8907\u88FD ChatGPT \u5206\u6790\u5167\u5BB9\uFF0C\u8ACB\u8CBC\u5230\u65B0\u5C0D\u8A71\u3002";
+    }
+    async function shareChatGPTPrompt() {
+      const stock = selected2(), text = buildChatGPTPrompt();
+      if (window.StocklabMobile?.shareText) {
+        await window.StocklabMobile.shareText(`${stock.id} ${stock.name || ""}\uFF5C\u53F0\u80A1\u7814\u7A76\u5BA4\u5206\u6790`, text);
+        return;
+      }
+      if (navigator.share) try {
+        await navigator.share({ title: `${stock.id} ${stock.name || ""}\uFF5C\u53F0\u80A1\u7814\u7A76\u5BA4\u5206\u6790`, text });
+        $2("mobile-status").textContent = "\u5DF2\u958B\u555F\u5206\u4EAB\u9078\u55AE\u3002";
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+      await copyChatGPTPrompt();
+    }
+    async function openChatGPTPrompt() {
+      if (window.StocklabMobile?.openChatGPT) {
+        const stock = selected2(), result = await window.StocklabMobile.openChatGPT(`${stock.id} ${stock.name || ""}\uFF5C\u53F0\u80A1\u7814\u7A76\u5BA4\u5206\u6790`, buildChatGPTPrompt());
+        if (result?.opened) return;
+      }
+      const opened = window.open("https://chatgpt.com/", "_blank", "noopener,noreferrer");
+      try {
+        await copyChatGPTPrompt();
+        $2("mobile-status").textContent = "\u5DF2\u8907\u88FD\u5206\u6790\u5167\u5BB9\u4E26\u958B\u555F ChatGPT\uFF0C\u8ACB\u8CBC\u5230\u65B0\u5C0D\u8A71\u4E26\u9078\u64C7 High\u3002";
+      } catch {
+        if (!opened) await shareChatGPTPrompt();
+        else $2("mobile-status").textContent = "\u5DF2\u958B\u555F ChatGPT\uFF1B\u8ACB\u5148\u6309\u300C\u8907\u88FD\u5206\u6790\u5167\u5BB9\u300D\u518D\u8CBC\u4E0A\u3002";
+      }
+    }
+    function previewChatGPTPrompt() {
+      $2("chatgpt-prompt").value = buildChatGPTPrompt();
+      $2("chatgpt-dialog").showModal();
+    }
+    for (const id of ["similarity-threshold", "minimum-samples"]) $2(id).onchange = renderBigData;
+    for (const id of ["scan-horizon", "scan-threshold", "scan-min-samples", "scan-min-score", "scan-only-qualified"]) $2(id).onchange = renderScanner;
+    for (const id of ["quick-chatgpt", "open-chatgpt", "dialog-open-chatgpt"]) $2(id).onclick = openChatGPTPrompt;
+    for (const id of ["copy-chatgpt", "dialog-copy-chatgpt"]) $2(id).onclick = copyChatGPTPrompt;
+    for (const id of ["share-chatgpt", "dialog-share-chatgpt"]) $2(id).onclick = shareChatGPTPrompt;
+    $2("preview-chatgpt").onclick = previewChatGPTPrompt;
+    return { render() {
+      bundle2 = getBundle();
+      stockId2 = selected2().id;
+      renderBigData();
+      renderScanner();
+    } };
+  }
+
+  // mobile/src/android064.js
+  var { Capacitor, CapacitorHttp, registerPlugin, Preferences, Filesystem, Directory, Encoding, App, Share } = window.StocklabCapacitor;
   var el = (id) => document.getElementById(id);
   var status = (text) => {
     el("mobile-status").textContent = text;
   };
-  var error = (text) => {
-    el("error").hidden = false;
-    el("error").textContent = text;
-  };
   var native = Capacitor.isNativePlatform();
   var ChatGPTLauncher = registerPlugin("ChatGPTLauncher");
+  var TOKEN_KEY = "twlab.finmind.token";
   async function bootstrap() {
     const settings = {};
-    for (const key of ["twlab.watch", "twlab.positions"]) {
-      try {
-        settings[key] = (await Preferences.get({ key })).value;
-      } catch {
-        settings[key] = null;
-      }
+    for (const key of ["twlab.watch", "twlab.positions"]) try {
+      settings[key] = (await Preferences.get({ key })).value;
+    } catch {
+      settings[key] = null;
     }
     const snapshots = createSnapshotStore({
       async read(path) {
         try {
           return (await Filesystem.readFile({ path, directory: Directory.Data, encoding: Encoding.UTF8 })).data;
         } catch (e) {
-          if (String(e.code) === "OS-PLUG-FILE-0008" || /not exist|not found|ENOENT/i.test(e.message || "")) return null;
-          throw Error("\u7121\u6CD5\u8B80\u53D6\u624B\u6A5F\u4FDD\u5B58\u7684\u8CC7\u6599\uFF0C\u8ACB\u6AA2\u67E5\u53EF\u7528\u5132\u5B58\u7A7A\u9593\u3002");
+          if (/not exist|not found|ENOENT/i.test(e.message || "") || String(e.code) === "OS-PLUG-FILE-0008") return null;
+          throw e;
         }
       },
       write: (path, data) => Filesystem.writeFile({ path, data, directory: Directory.Data, encoding: Encoding.UTF8 }),
       getSlot: async () => (await Preferences.get({ key: "twlab.market.slot" })).value,
       setSlot: (value) => Preferences.set({ key: "twlab.market.slot", value })
     });
-    let saved = null, warning = "";
+    let saved = null, warning = "", storedToken = "";
     try {
       const restored = await snapshots.load();
       saved = restored.bundle;
-      if (restored.recovered) warning = "\u4E0A\u6B21\u8CC7\u6599\u4E0D\u5B8C\u6574\uFF0C\u5DF2\u6062\u5FA9\u524D\u4E00\u4EFD\u4FDD\u5B58\u8CC7\u6599\u3002";
-      if (restored.damaged) warning = "\u4FDD\u5B58\u8CC7\u6599\u7121\u6CD5\u89E3\u6790\uFF0C\u8ACB\u91CD\u65B0\u6293\u53D6\u6216\u532F\u5165 JSON\u3002";
-    } catch (e) {
-      warning = e.message;
+      if (restored.recovered) warning = "\u5DF2\u6062\u5FA9\u524D\u4E00\u4EFD\u4FDD\u5B58\u8CC7\u6599\u3002";
+      if (restored.damaged) warning = "\u4FDD\u5B58\u8CC7\u6599\u7121\u6CD5\u8B80\u53D6\uFF0C\u8ACB\u91CD\u65B0\u6293\u53D6\u6216\u532F\u5165 JSON\u3002";
+    } catch {
+      warning = "\u7121\u6CD5\u8B80\u53D6\u88DD\u7F6E\u884C\u60C5\uFF0C\u8ACB\u6AA2\u67E5\u5132\u5B58\u7A7A\u9593\u3002";
     }
-    let storedToken = "";
     try {
       storedToken = (await Preferences.get({ key: TOKEN_KEY })).value || "";
     } catch {
-      warning = "\u5DF2\u4FDD\u5B58\u7684 Token \u7121\u6CD5\u8B80\u53D6\uFF0C\u8ACB\u5728\u8CC7\u6599\u4F86\u6E90\u91CD\u65B0\u8F38\u5165\uFF1B\u884C\u60C5\u8CC7\u6599\u4ECD\u53EF\u4F7F\u7528\u3002";
+      warning = "\u5DF2\u4FDD\u5B58\u7684 Token \u7121\u6CD5\u8B80\u53D6\uFF0C\u8ACB\u91CD\u65B0\u8F38\u5165\u3002";
     }
-    const browserRequest = async (options) => {
-      const u = new URL(options.url);
-      for (const [k, v] of Object.entries(options.params || {})) if (v !== null && v !== void 0 && v !== "") u.searchParams.set(k, String(v));
-      const r = await fetch(u.toString(), { method: "GET", headers: options.headers || {}, cache: "no-store" });
-      const text = await r.text();
-      let data = text;
-      try { data = JSON.parse(text); } catch {}
-      return { status: r.status, data };
-    };
-    const loadMarket = createFinMindClient((options) => native ? CapacitorHttp.get(options) : browserRequest(options));
+    const loadMarket = createFinMindClient(async (options) => {
+      if (native) return CapacitorHttp.get(options);
+      const url = new URL(options.url);
+      for (const [k, v] of Object.entries(options.params)) url.searchParams.set(k, v);
+      const response = await fetch(url, { headers: options.headers, cache: "no-store" });
+      return { status: response.status, data: await response.text() };
+    });
     let settingWrites = Promise.resolve();
     window.StocklabMobile = {
       restoredBundle: saved,
+      setupExtra: (context) => createScannerUI(context),
       readLocal(key, fallback) {
         try {
           return JSON.parse(settings[key]) ?? fallback;
@@ -2376,29 +2648,23 @@
         const encoded = settings[key];
         settingWrites = settingWrites.catch(() => {
         }).then(() => Preferences.set({ key, value: encoded }));
-        settingWrites.catch(() => error("\u624B\u6A5F\u8A2D\u5B9A\u4FDD\u5B58\u5931\u6557\uFF1B\u8ACB\u6AA2\u67E5\u53EF\u7528\u5132\u5B58\u7A7A\u9593\u3002"));
+        return settingWrites;
       },
       async bundleChanged(bundle2) {
         if (bundle2.mode === "demo") {
-          status("\u793A\u7BC4\u8CC7\u6599 \xB7 \u4E0A\u6B21\u771F\u5BE6\u8CC7\u6599\u4ECD\u4FDD\u7559");
+          status("\u6A21\u64EC\u8CC7\u6599\u6A21\u5F0F\uFF1B\u4E0A\u6B21\u771F\u5BE6\u8CC7\u6599\u4ECD\u4FDD\u7559\u3002");
           return;
         }
         status("\u6B63\u5728\u4FDD\u5B58\u5230\u624B\u6A5F\u2026");
-        try {
-          await snapshots.save(bundle2);
-          status(`\u5DF2\u4FDD\u5B58\u81F3\u624B\u6A5F \xB7 ${bundle2.stocks.length} \u6A94 \xB7 \u53EF\u96E2\u7DDA\u4F7F\u7528`);
-        } catch {
-          error("\u8CC7\u6599\u5DF2\u8F09\u5165\uFF0C\u4F46\u624B\u6A5F\u4FDD\u5B58\u5931\u6557\u3002\u8ACB\u5148\u532F\u51FA JSON\uFF0C\u4E26\u6AA2\u67E5\u5269\u9918\u7A7A\u9593\u3002");
-          status("\u5C1A\u672A\u4FDD\u5B58\uFF0C\u8ACB\u532F\u51FA\u5099\u4EFD");
-        }
+        await snapshots.save(bundle2);
+        status(bundle2.stocks.length ? `\u5DF2\u4FDD\u5B58\u81F3\u624B\u6A5F \xB7 ${bundle2.stocks.length} \u6A94 \xB7 \u53EF\u96E2\u7DDA\u4F7F\u7528` : "\u5DF2\u79FB\u9664\u6240\u6709\u884C\u60C5\u8CC7\u6599\uFF1BToken \u8207\u6301\u80A1\u8A2D\u5B9A\u4FDD\u7559\u3002");
       },
       async fetchMarket(query) {
         el("fetch-progress").hidden = false;
-        el("fetch-progress").textContent = "\u958B\u59CB\u9023\u7DDA FinMind\u2026";
         try {
-          if (el("remember-token").checked && query.token) await Preferences.set({ key: TOKEN_KEY, value: query.token });
-          else await Preferences.remove({ key: TOKEN_KEY });
           storedToken = el("remember-token").checked ? query.token : "";
+          if (storedToken) await Preferences.set({ key: TOKEN_KEY, value: storedToken });
+          else await Preferences.remove({ key: TOKEN_KEY });
           return await loadMarket({ ...query, onProgress: (text) => {
             el("fetch-progress").textContent = text;
           } });
@@ -2407,108 +2673,90 @@
         }
       },
       async copyText(text) {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(String(text));
-          status("已複製 ChatGPT 分析內容");
-          return;
+        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+        else {
+          const area = document.createElement("textarea");
+          area.value = text;
+          document.body.append(area);
+          area.select();
+          if (!document.execCommand("copy")) throw Error("\u8ACB\u624B\u52D5\u8907\u88FD\u5206\u6790\u5167\u5BB9");
+          area.remove();
         }
-        const ta = document.createElement("textarea");
-        ta.value = String(text);
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        ta.remove();
-        status("已複製 ChatGPT 分析內容");
       },
       async openChatGPT(title, text) {
         if (!native) return { opened: false };
         try {
-          return await ChatGPTLauncher.open({ title: String(title || "台股研究室深度分析"), text: String(text || "") });
+          return await ChatGPTLauncher.open({ title, text });
         } catch {
           return { opened: false };
         }
       },
       async shareText(title, text) {
-        await Share.share({ title: String(title || "台股研究室分析"), text: String(text || ""), dialogTitle: "選擇 ChatGPT 或其他 App" });
-        status("已開啟分享選單");
+        await Share.share({ title, text, dialogTitle: "\u9078\u64C7 ChatGPT \u6216\u5176\u4ED6 App" });
       },
       async download(name, content, type) {
         if (!native) {
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(new Blob([content], { type }));
+          const url = URL.createObjectURL(new Blob([content], { type })), link = document.createElement("a");
+          link.href = url;
           link.download = name;
           link.click();
-          setTimeout(() => URL.revokeObjectURL(link.href), 1e3);
+          setTimeout(() => URL.revokeObjectURL(url), 6e4);
           return;
         }
-        const safeName = String(name).replace(/[\\/:*?"<>|]/g, "_");
-        const path = `${Date.now()}-${safeName}`;
+        const path = `${Date.now()}-${name.replace(/[\\/:*?"<>|]/g, "_")}`;
         if (content instanceof Blob) {
-          const data = await new Promise((resolve2, reject) => {
+          const data = await new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () => resolve2(String(reader.result || "").split(",")[1] || "");
-            reader.onerror = () => reject(reader.error || Error("Blob read failed"));
+            reader.onload = () => resolve(String(reader.result).split(",")[1]);
+            reader.onerror = reject;
             reader.readAsDataURL(content);
           });
           await Filesystem.writeFile({ path, data, directory: Directory.Cache });
-        } else {
-          await Filesystem.writeFile({ path, data: String(content), directory: Directory.Cache, encoding: Encoding.UTF8 });
-        }
+        } else await Filesystem.writeFile({ path, data: String(content), directory: Directory.Cache, encoding: Encoding.UTF8 });
         const file = await Filesystem.getUri({ path, directory: Directory.Cache });
         await Share.share({ title: name, url: file.uri, dialogTitle: `\u532F\u51FA ${name}` });
         status(`\u5DF2\u6E96\u5099\u532F\u51FA ${name}`);
       },
       ready() {
-        el("runtime-label").textContent = native ? "v0.6.4 · Android · Big Data" : "v0.6.4 · PWA / Web · Big Data";
+        el("runtime-label").textContent = native ? "v0.6.5 \xB7 Android \xB7 Big Data" : "v0.6.5 \xB7 Android \u9810\u89BD";
         el("fetch-form").hidden = false;
-        el("fetch-instruction").textContent = native ? "Android \u76F4\u63A5\u5411 FinMind \u67E5\u8A62\uFF0C\u6293\u53D6\u5B8C\u6210\u6703\u4FDD\u5B58\u4EE5\u4F9B\u96E2\u7DDA\u5206\u6790\u3002\u4E00\u6B21\u6700\u591A 10 \u6A94\u3002" : "\u7DB2\u9801 / PWA \u6703\u76F4\u63A5\u5411 FinMind \u67E5\u8A62\u3002\u5982\u700F\u89BD\u5668\u963B\u64CB API\uFF0C\u53EF\u6539\u7528 APK \u6216\u532F\u5165 JSON\u3002\u4E00\u6B21\u6700\u591A 10 \u6A94\u3002";
         el("token").value = storedToken;
-        el("remember-token").checked = Boolean(storedToken);
-        const today = /* @__PURE__ */ new Date();
-        const start = new Date(today);
+        el("remember-token").checked = true;
+        const end = /* @__PURE__ */ new Date(), start = /* @__PURE__ */ new Date();
         start.setUTCFullYear(start.getUTCFullYear() - 3);
         el("fetch-start").value = start.toISOString().slice(0, 10);
-        el("fetch-end").value = today.toLocaleDateString("sv-SE", { timeZone: "Asia/Taipei" });
+        el("fetch-end").value = end.toLocaleDateString("sv-SE", { timeZone: "Asia/Taipei" });
         el("forget-token").onclick = async () => {
           try {
             await Preferences.remove({ key: TOKEN_KEY });
             storedToken = "";
             el("token").value = "";
-            el("remember-token").checked = false;
             status("\u5DF2\u79FB\u9664\u4FDD\u5B58\u7684 Token");
           } catch {
-            error("\u7121\u6CD5\u79FB\u9664 Token\uFF0C\u8ACB\u91CD\u8A66\u3002");
+            el("error").hidden = false;
+            el("error").textContent = "Token \u79FB\u9664\u5931\u6557\uFF0C\u8ACB\u91CD\u8A66\u3002";
           }
         };
         el("open-data").addEventListener("click", () => {
-          el("token").value = storedToken;
+          if (storedToken) el("token").value = storedToken;
         });
         document.querySelectorAll("nav button").forEach((button) => button.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "instant" })));
-        if (warning) error(warning);
+        if (warning) {
+          el("error").hidden = false;
+          el("error").textContent = warning;
+        }
       }
     };
     await Promise.resolve().then(() => (init_app(), app_exports));
-    if (native) {
-      await App.addListener("backButton", () => {
-        const dialog = document.querySelector("dialog[open]");
-        if (dialog) {
-          dialog.close();
-          return;
-        }
-        if (!document.getElementById("overview").classList.contains("active")) {
-          document.querySelector('button[data-page="overview"]').click();
-          return;
-        }
-        App.minimizeApp();
-      });
-    }
+    if (native) await App.addListener("backButton", () => {
+      const dialog = document.querySelector("dialog[open]");
+      if (dialog) {
+        dialog.close();
+        return;
+      }
+      if (!el("scanner").classList.contains("active")) document.querySelector('[data-page="scanner"]').click();
+      else App.minimizeApp();
+    });
   }
   bootstrap().catch((e) => window.stocklabStartup.fail(e.message));
 })();
-/*! Bundled license information:
-
-@capacitor/core/dist/index.js:
-  (*! Capacitor: https://capacitorjs.com/ - MIT License *)
-*/
