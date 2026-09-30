@@ -1,0 +1,54 @@
+台股研究室 v0.6.5 替換檔（Android / GitHub 原始碼）
+
+適用現有儲存庫：https://github.com/Mutoe0901/taiwan-stock-lab
+基準提交：6a2fe3702524c3b7183b36eaf0ee94a8ae244ba2（v0.6.4）
+這是 7 個原始碼替換檔，不是可直接安裝的 APK。
+請先解壓縮，不要把 ZIP 本身上傳到 GitHub 當成更新。
+
+【需要覆蓋的 7 個檔案，務必保留路徑】
+package.json
+web/index.html
+web/main.js
+web/style.css
+web/sw.js
+scripts/patch-android-chatgpt.mjs
+.github/workflows/android-build.yml
+
+【如果電腦已有 GitHub 專案資料夾】
+1. 先備份或提交目前的修改。若儲存庫在上述基準版本之後已有其他修改，先比對再覆蓋。
+2. 將本壓縮包的 package.json、web、scripts、.github 合併複製至專案根目錄，覆蓋同名檔案。保留其他原有檔案；不要刪除整個資料夾。
+3. 確認這 7 個檔案都已更新，再 commit / push 到既有 main 分支。
+
+【只用 GitHub 網頁操作】
+1. 開啟原本 Mutoe0901/taiwan-stock-lab 儲存庫，確認分支是 main。
+2. 到 web 資料夾，上傳解壓後 web 裡面的 4 個檔案，覆蓋同名檔案並提交。不要把 web 資料夾再放進 web 裡面。
+3. 到 scripts 資料夾，上傳 patch-android-chatgpt.mjs，覆蓋並提交。
+4. 回儲存庫根目錄，上傳 package.json，覆蓋並提交。
+5. 開啟 .github/workflows/android-build.yml，用編輯功能將內容全部換成壓縮包內同一路徑檔案的內容，然後提交。
+   如果檔案總管未顯示 .github，請顯示隱藏項目；不可漏掉此檔。
+6. 以上分次提交可能啟動多次建置。請等最後一次提交的建置結果，不要下載中途版本。
+
+【取得 APK】
+1. 提交後，到儲存庫 Actions，開啟 Build Android APK 工作流程。
+2. 等待最後一次提交的執行成功（綠色）。也可以手動執行 workflow_dispatch，選擇 main。
+3. 在該次執行的 Artifacts 區下載 taiwan-stock-lab-debug-apk。
+4. 解壓縮下載檔，裡面才是可安裝的 app-debug.apk；開啟後應顯示 v0.6.5。
+5. 安裝前先匯出手機現有股票 JSON。GitHub 產生的 debug APK 簽章可能與舊版不同；若手機拒絕覆蓋安裝，先不要卸載舊版，以免遺失本機資料與 Token。
+
+【修正內容】
+- FinMind Token 改用 Authorization: Bearer Header，並在本機保留。
+- 500/502/503/504 自動重試；完整區間失敗後依日期分段（每段最多 365 天）合併。
+- 401/402/403/429 與伺服器錯誤依原因顯示訊息。
+- 真實股票查詢成功會切換標的；查詢失敗顯示尚未載入，不以 DEMO1 代替。
+- 模擬資料須明確選用；首次啟動不自動載入 DEMO。
+- OHLC / 成交量正規化及資料檢查；不合格資料列顯示診斷，不捏造價格。
+- 自選切換、移除股票資料與保存空清單修復；移除失敗保留原資料。
+- 保留掃描、總覽、大數據、回測、資金、估值、匯出、PWA 與 ChatGPT 功能。
+- 更新版本及 Service Worker 快取。
+
+【驗證與限制】
+共 24 項 PWA / FinMind / 儲存測試先前已通過，並完成網頁預覽。
+本包尚未產出 Android APK，也尚未在你的手機或使用你的 FinMind Token 進行實機驗證。
+FinMind 上游服務若持續故障，重試仍可能失敗，畫面會顯示實際錯誤。
+
+原本 Sites 網址的網頁修正版已另外更新；此包用於既有 GitHub / Android 專案，不需建立新 Site。
