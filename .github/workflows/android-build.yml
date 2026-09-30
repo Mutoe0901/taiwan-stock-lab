@@ -22,7 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify v0.6.4 source files
+      - name: Verify v0.6.5 source files
         shell: bash
         run: |
           node <<'NODE'
@@ -31,8 +31,8 @@ jobs:
           const html = fs.readFileSync('web/index.html', 'utf8');
           const js = fs.readFileSync('web/main.js', 'utf8');
           const required = [
-            [pkg.version === '0.6.4', `package.json version is ${pkg.version}, expected 0.6.4`],
-            [html.includes('v0.6.4'), 'web/index.html does not show v0.6.4'],
+            [pkg.version === '0.6.5', `package.json version is ${pkg.version}, expected 0.6.5`],
+            [html.includes('v0.6.5'), 'web/index.html does not show v0.6.5'],
             [html.includes('id="quick-chatgpt"'), 'web/index.html is missing the ChatGPT quick button'],
             [html.includes('ChatGPT 深度分析'), 'web/index.html is missing ChatGPT 深度分析 text'],
             [js.includes('ChatGPTLauncher'), 'web/main.js is missing ChatGPT launcher logic'],
@@ -44,7 +44,7 @@ jobs:
             for (const e of errors) console.error('- ' + e);
             process.exit(1);
           }
-          console.log('Verified: Taiwan Stock Lab v0.6.4');
+          console.log('Verified: Taiwan Stock Lab v0.6.5');
           console.log('Verified: web/ ChatGPT button and launcher source are present');
           NODE
 
