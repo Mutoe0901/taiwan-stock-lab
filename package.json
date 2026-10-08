@@ -1,12 +1,13 @@
 {
   "name": "taiwan-stock-lab",
-  "version": "0.6.5",
+  "version": "0.7.0",
   "private": true,
   "description": "Taiwan Stock Lab - PWA + Android Capacitor wrapper",
   "scripts": {
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",
-    "android:open": "npx cap open android"
+    "android:open": "npx cap open android",
+    "test:ab": "node --test tests/ab-strategies.test.cjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",

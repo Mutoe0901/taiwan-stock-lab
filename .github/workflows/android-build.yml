@@ -22,7 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify v0.6.5 source files
+      - name: Verify v0.7.0 source files
         shell: bash
         run: |
           node <<'NODE'
@@ -31,11 +31,14 @@ jobs:
           const html = fs.readFileSync('web/index.html', 'utf8');
           const js = fs.readFileSync('web/main.js', 'utf8');
           const required = [
-            [pkg.version === '0.6.5', `package.json version is ${pkg.version}, expected 0.6.5`],
-            [html.includes('v0.6.5'), 'web/index.html does not show v0.6.5'],
+            [pkg.version === '0.7.0', `package.json version is ${pkg.version}, expected 0.7.0`],
+            [html.includes('v0.7.0'), 'web/index.html does not show v0.7.0'],
             [html.includes('id="quick-chatgpt"'), 'web/index.html is missing the ChatGPT quick button'],
             [html.includes('ChatGPT 深度分析'), 'web/index.html is missing ChatGPT 深度分析 text'],
             [js.includes('ChatGPTLauncher'), 'web/main.js is missing ChatGPT launcher logic'],
+            [html.includes('id="ab-run"'), 'A/B 策略介面缺失'],
+            [fs.existsSync('web/ab-strategies.js'), 'A/B 策略引擎缺失'],
+            [fs.existsSync('web/ab-ui.js'), 'A/B 介面邏輯缺失'],
             [fs.existsSync('scripts/patch-android-chatgpt.mjs'), 'scripts/patch-android-chatgpt.mjs is missing']
           ];
           const errors = required.filter(([ok]) => !ok).map(([,msg]) => msg);
@@ -44,7 +47,7 @@ jobs:
             for (const e of errors) console.error('- ' + e);
             process.exit(1);
           }
-          console.log('Verified: Taiwan Stock Lab v0.6.5');
+          console.log('Verified: Taiwan Stock Lab v0.7.0');
           console.log('Verified: web/ ChatGPT button and launcher source are present');
           NODE
 
@@ -52,6 +55,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Validate A/B strategy update
+        run: |
+          node scripts/verify-stocklab-070.mjs
+          npm run test:ab
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -76,12 +84,31 @@ jobs:
       - name: Add direct ChatGPT launcher
         run: node scripts/patch-android-chatgpt.mjs
 
+      - name: Configure stable APK signing and versionCode
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: node scripts/configure-android-signing.mjs
+
       - name: Build debug APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         working-directory: android
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Verify APK exists
         run: ls -lah android/app/build/outputs/apk/debug/
+
+      - name: Verify APK certificate and signature
+        shell: bash
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          if [ -z "$APKSIGNER" ]; then echo "Android apksigner missing"; exit 1; fi
+          "$APKSIGNER" verify --verbose --print-certs android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

@@ -1,4 +1,4 @@
-const CACHE='stocklab-v0.6.5';const FILES=['./','./index.html','./main.js?v=0.6.5','./style.css','./mobile.css','./manifest.webmanifest','./icon.svg'];
+const CACHE='stocklab-v0.7.0';const FILES=['./','./index.html','./main.js?v=0.7.0','./ab-strategies.js?v=0.7.0','./ab-ui.js?v=0.7.0','./ab.css?v=0.7.0','./style.css','./mobile.css','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('stocklab-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin||e.request.headers.has('Authorization'))return;e.respondWith(fetch(e.request).then(r=>{if(r.ok)caches.open(CACHE).then(c=>c.put(e.request,r.clone()));return r;}).catch(()=>caches.match(e.request)));});

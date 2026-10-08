@@ -247,11 +247,11 @@
     return s;
   }
   function go(p) {
-    if (!["scanner", "bigdata", "overview", "strategy", "flows", "report"].includes(p) || !document.getElementById(p)) p = "overview";
+    if (!["scanner", "bigdata", "overview", "strategy", "ab", "flows", "report"].includes(p) || !document.getElementById(p)) p = "overview";
     page = p;
     document.querySelectorAll(".page").forEach((e) => e.classList.toggle("active", e.id === p));
     document.querySelectorAll("nav button").forEach((e) => e.classList.toggle("active", e.dataset.page === p));
-    $("page-title").textContent = { scanner: "\u6383\u63CF\u9078\u80A1", bigdata: "\u6B77\u53F2\u76F8\u4F3C\u689D\u4EF6\u5206\u6790", overview: "\u500B\u80A1\u7E3D\u89BD", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[p];
+    $("page-title").textContent = { scanner: "\u6383\u63CF\u9078\u80A1", bigdata: "\u6B77\u53F2\u76F8\u4F3C\u689D\u4EF6\u5206\u6790", overview: "\u500B\u80A1\u7E3D\u89BD", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", ab: "A/B \u96D9\u7B56\u7565", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[p];
     history.replaceState(null, "", "#" + p);
   }
   function showLoadState(id, failed = false, detail = "") {
@@ -322,6 +322,7 @@
     }
     const s = selected(), b = s.bars.at(-1), prev = s.bars.at(-2), change = prev ? b.close / prev.close - 1 : null, inds = indicators(s.bars);
     $("stock").value = stockId;
+    window.StocklabABUI?.render?.();
     $("data-date").textContent = `${s.bars[0].date} \u2014 ${b.date} \xB7 ${s.bars.length} \u7B46`;
     renderWatch();
     $("stock-metrics").innerHTML = metric("\u6536\u76E4\u50F9", fmt(b.close), "\u65B0\u81FA\u5E63 / \u5143") + metric("\u55AE\u65E5\u6F32\u8DCC", pct(change), "\u76F8\u5C0D\u524D\u4E00\u7B46\u6536\u76E4", sign(change)) + metric("\u6210\u4EA4\u91CF", fmt(b.volume / 1e3, 0), "\u5F35 / \u6BCF\u5F35 1,000 \u80A1") + metric("\u672C\u76CA\u6BD4", isNum(b.pe) && b.pe > 0 ? fmt(b.pe) + "x" : "\u2014", s.sector || "\u672A\u5206\u985E");
@@ -526,6 +527,7 @@
       if (!Array.isArray(watch)) watch = [];
       if (!positions || typeof positions !== "object" || Array.isArray(positions)) positions = {};
       selected = () => bundle.stocks.find((s) => s.id === stockId);
+       window.StocklabABBridge = { getBundle: () => bundle, getSelected: () => selected() };
       mode = () => bundle.mode === "demo" ? "\u6A21\u64EC\u8CC7\u6599" : "\u532F\u5165\u8CC7\u6599";
       metric = (label, value, small = "", cls = "") => `<div class="metric"><div class="metric-label">${esc(label)}</div><div class="metric-value ${cls}">${value}</div><small>${esc(small)}</small></div>`;
       download = (name, content, type = "application/json") => {
@@ -2718,7 +2720,7 @@ ${financialLines}
         status(`\u5DF2\u6E96\u5099\u532F\u51FA ${name}`);
       },
       ready() {
-        el("runtime-label").textContent = native ? "v0.6.5 \xB7 Android \xB7 Big Data" : "v0.6.5 \xB7 Android \u9810\u89BD";
+        el("runtime-label").textContent = native ? "v0.7.0 \xB7 Android \xB7 Big Data" : "v0.7.0 \xB7 Android \u9810\u89BD";
         el("fetch-form").hidden = false;
         el("token").value = storedToken;
         el("remember-token").checked = true;
