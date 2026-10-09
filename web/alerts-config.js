@@ -1,4 +1,4 @@
-/* 台股研究室 v0.7.1 - Firebase 公開設定
+/* 台股研究室 v0.7.2 - Firebase 公開設定
    不得放入 Fugle API Key 或 Firebase 服務帳戶私鑰
 */
 

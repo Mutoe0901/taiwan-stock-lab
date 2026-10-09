@@ -10,6 +10,7 @@ on:
       - "web/**"
       - "scripts/**"
       - "package.json"
+      - "package-lock.json"
       - "capacitor.config.json"
       - ".github/workflows/android-build.yml"
 
@@ -22,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify v0.7.1 source files
+      - name: Verify v0.7.2 source files
         shell: bash
         run: |
           node <<'NODE'
@@ -31,8 +32,8 @@ jobs:
           const html = fs.readFileSync('web/index.html', 'utf8');
           const js = fs.readFileSync('web/main.js', 'utf8');
           const required = [
-            [pkg.version === '0.7.1', `package.json version is ${pkg.version}, expected 0.7.1`],
-            [html.includes('v0.7.1'), 'web/index.html does not show v0.7.1'],
+            [pkg.version === '0.7.2', `package.json version is ${pkg.version}, expected 0.7.2`],
+            [html.includes('v0.7.2'), 'web/index.html does not show v0.7.2'],
             [html.includes('id="quick-chatgpt"'), 'web/index.html is missing the ChatGPT quick button'],
             [html.includes('ChatGPT 深度分析'), 'web/index.html is missing ChatGPT 深度分析 text'],
             [js.includes('ChatGPTLauncher'), 'web/main.js is missing ChatGPT launcher logic'],
@@ -47,22 +48,25 @@ jobs:
             for (const e of errors) console.error('- ' + e);
             process.exit(1);
           }
-          console.log('Verified: Taiwan Stock Lab v0.7.1');
+          console.log('Verified: Taiwan Stock Lab v0.7.2');
           console.log('Verified: web/ ChatGPT button and launcher source are present');
           NODE
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
+
+      - name: Install npm dependencies
+        run: npm ci
 
       - name: Validate A/B strategy update
         run: |
-          node scripts/verify-stocklab-071.mjs
+          node scripts/verify-stocklab-072.mjs
           npm run test:ab
           npm run build:worker
           npm run test:alerts
-          node --test tests/google-native-login.test.cjs
+          npm test
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -74,9 +78,6 @@ jobs:
         uses: android-actions/setup-android@v4
         with:
           packages: ""
-
-      - name: Install npm dependencies
-        run: npm install
 
       - name: Create Android project
         run: npx cap add android

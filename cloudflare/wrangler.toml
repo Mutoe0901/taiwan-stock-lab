@@ -25,4 +25,7 @@ ALLOWED_ORIGINS = "https://taiwan-stock-lab-mutoe.mutoe-chen-2361.chatgpt.site,h
 PUBLIC_SITE_URL = "https://taiwan-stock-lab-mutoe.mutoe-chen-2361.chatgpt.site/#ab"
 FIREBASE_PROJECT_ID = "taiwan-stock-lab-b6294"
 # Secrets stored in Cloudflare dashboard (Production):
-# FUGLE_API_KEY, FIREBASE_SERVICE_ACCOUNT_JSON, ADMIN_EMAIL
+# FUGLE_KEYRING_JSON (JSON map of versions to base64 32-byte AES keys),
+# FIREBASE_SERVICE_ACCOUNT_JSON, ADMIN_EMAIL
+# Legacy FUGLE_API_KEY is no longer read. Keep untouched for rollback.
+FUGLE_KEY_VERSION = "v1"

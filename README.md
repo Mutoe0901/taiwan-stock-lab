@@ -1,3 +1,9 @@
+# v0.7.2 升級
+
+最新功能與操作請看 [v0.7.2 操作手冊](docs/OPERATION_MANUAL_v0.7.2.md)。正式部署狀態請看 [交付狀態](docs/RELEASE_STATUS_v0.7.2.md)。
+
+以下為舊版使用說明；受邀登入、共用 Fugle Key 與舊推播步驟已由 v0.7.2 手冊取代。
+
 # Taiwan Stock Lab
 
 台股研究室：PWA + Android (Capacitor) 專案。

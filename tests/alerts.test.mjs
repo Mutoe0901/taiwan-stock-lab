@@ -5,8 +5,8 @@ const local=(d)=>Date.parse(d);
 const candle=date=>({date,open:10,high:12,low:9,close:11,volume:100});
 test('Taipei H1 schedule includes complete hour after buffer and last short bar',()=>{
   assert.equal(isScanTime(local('2026-10-09T10:02:00+08:00')),true);
-  assert.equal(isScanTime(local('2026-10-09T13:36:00+08:00')),true);
-  assert.equal(isScanTime(local('2026-10-09T09:35:00+08:00')),false);
+  assert.equal(isScanTime(local('2026-10-09T13:35:00+08:00')),true);
+  assert.equal(isScanTime(local('2026-10-09T09:35:00+08:00')),true);
   assert.equal(isScanTime(local('2026-10-10T10:02:00+08:00')),false);
 });
 test('exclude unfinished current hour and include closed H1 candle',()=>{
@@ -17,7 +17,7 @@ test('exclude unfinished current hour and include closed H1 candle',()=>{
 test('last 13:00 candle is not considered closed until 13:35',()=>{
   const b=candle('2026-10-09T13:00:00.000+08:00');
   assert.equal(closedH1(b,local('2026-10-09T13:32:00+08:00')),false);
-  assert.equal(closedH1(b,local('2026-10-09T13:36:00+08:00')),true);
+  assert.equal(closedH1(b,local('2026-10-09T13:35:00+08:00')),true);
 });
 test('historical candles with timezone are filtered by closure',()=>{
   const now=local('2026-10-09T10:05:00+08:00');
@@ -70,10 +70,10 @@ test('Worker enforces origin, validates symbols and never accepts 11 tracked sto
 // Firebase JWT verification must reject unsigned, wrong-project and forged IDs.
 import {verifyFirebase,accessFor} from '../cloudflare/src/auth.mjs';
 import {webcrypto} from 'node:crypto';
-test('allowlist makes the owner admin and only invited verified users members',()=>{
+test('owner keeps role; all verified users may join',()=>{
   assert.equal(accessFor({email:'owner@example.com'},'OWNER@example.com',false),'admin');
   assert.equal(accessFor({email:'friend@example.com'},'owner@example.com',true),'member');
-  assert.equal(accessFor({email:'stranger@example.com'},'owner@example.com',false),null);
+  assert.equal(accessFor({email:'stranger@example.com'},'owner@example.com',false),'member');
 });
 test('Firebase verifies real RS256 signing, issuer, audience and verified email',async()=>{
   const previousFetch=globalThis.fetch;

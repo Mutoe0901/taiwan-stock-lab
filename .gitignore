@@ -1,0 +1,13 @@
+node_modules/
+android/
+dist/
+.backups/
+.wrangler/
+.env
+.dev.vars
+*.jks
+*.keystore
+*.apk
+*.aab
+**/google-services.json
+*service-account*.json

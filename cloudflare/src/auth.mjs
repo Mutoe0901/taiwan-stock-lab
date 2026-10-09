@@ -32,5 +32,5 @@ export async function verifyFirebase(req,env){
 }
 export function accessFor(identity,adminEmail,invited){
   if(identity.email===String(adminEmail||'').trim().toLowerCase()&&adminEmail)return 'admin';
-  return invited?'member':null;
+  return 'member';
 }

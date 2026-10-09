@@ -22,8 +22,8 @@ test('Worker test endpoint requires Firebase authorization',async()=>{
  const r=await worker.fetch(new Request('https://worker.example/api/admin/test-push',{method:'POST'}),{FIREBASE_PROJECT_ID:'test-project'});
  assert.equal(r.status,401);
 });
-test('Worker UI exposes a test button but keeps it admin-only',()=>{
+test('Worker UI exposes personal device tests',()=>{
  const src=readFileSync(new URL('../web/alerts-client.js',import.meta.url),'utf8');
  assert.match(src,/alerts-test-push/);
- assert.match(src,/currentRole!=='admin'/);
+ assert.match(src,/api\/test-push/);assert.doesNotMatch(src,/currentRole!=='admin'/);
 });

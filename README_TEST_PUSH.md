@@ -1,3 +1,5 @@
+> v0.7.2 已更新，請先閱讀 [最新操作手冊](docs/OPERATION_MANUAL_v0.7.2.md)。以下保留舊版歷史說明；邀請與共用 Key 步驟不適用新版。
+
 # Taiwan Stock Lab - Admin-only Worker FCM test
 
 This patch adds an authenticated admin-only POST /api/admin/test-push endpoint and a button inside the Android/web app. It sends a notification to the latest active Android device owned by the logged-in admin. It never writes a fake BUY/SELL signal to user_events or user_deliveries. Requests are limited to one per admin per minute via D1.

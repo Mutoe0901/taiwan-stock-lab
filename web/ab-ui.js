@@ -1,4 +1,4 @@
-/* Taiwan Stock Lab A/B interface v0.7.1 - shares existing loaded stock bundle. */
+/* Taiwan Stock Lab A/B interface v0.7.2 - shares existing loaded stock bundle. */
 (function() {
   'use strict';
   const $=id=>document.getElementById(id);
@@ -6,7 +6,7 @@
   const pct=n=>typeof n==='number'&&Number.isFinite(n)?(100*n).toFixed(2)+'%':'—';
   const num=n=>typeof n==='number'&&Number.isFinite(n)?n.toFixed(2):'—';
   const imported=new Map();
-  let lastRuns=null,lastStock=null,sessionKey="",autoTimer=null;
+  let lastRuns=null,lastStock=null,autoTimer=null;
   function active() { return $('ab-timeframe').value; }
   function bridge() { return window.StocklabABBridge; }
   function currentStock() { return bridge()?.getSelected?.(); }
@@ -16,7 +16,7 @@
     if (active()==='D1')return stock.bars;
     const key=stock.id;
     if (!imported.has(key))throw Error('尚未取得 '+key+' 的 H1 K 線。請先匯入 Fugle 60 分 K JSON，或使用個人的 Fugle API Key 擷取。');
-    return imported.get(key);
+    return window.StocklabH1.closedBars(imported.get(key));
   }
   function options(){return {
     fee:Number($('ab-fee').value)/100,
@@ -62,62 +62,18 @@
     showCurrent();
   }
   async function fetchFugle() {
-    if(window.StocklabAlerts?.hasCloud?.()) {
-      const s=currentStock();if(!s)throw Error('尚未選擇股票');
-      message('正在使用雲端已快取的 Fugle H1 行情…');
-      const payload=await window.StocklabAlerts.getCandles(s.id);
-      const bars=window.StocklabAB.cleanBars(payload.data);
-      if(bars.length<65)throw Error('雲端歷史 H1 資料尚未達 65 根；請待背景掃描初始化。');
-      imported.set(s.id,bars);$('ab-timeframe').value='H1';
-      message('已讀取雲端 H1 行情 '+bars.length+' 根；最後資料：'+bars.at(-1).date);
-      showCurrent();return;
-    }
-
-    const apiKey=$('ab-fugle-key').value.trim() || sessionKey;
-    if(!apiKey)throw Error('未配對雲端時，請輸入個人 Fugle API Key；建議先啟用雲端安全保存。');
-    sessionKey=apiKey;
-    const s=currentStock();if(!s)throw Error('請先選擇股票');
-    if(!/^[0-9A-Za-z]{4,8}$/.test(s.id))throw Error('無效股票代碼');
-    const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-    const fromDate=new Date(Date.now()-160*86400000).toISOString().slice(0,10);
-    const base='https://api.fugle.tw/marketdata/v1.0/stock/';
-    const urls=[base+'historical/candles/'+encodeURIComponent(s.id)+'?timeframe=60&from='+fromDate+'&to='+today+'&sort=asc',base+'intraday/candles/'+encodeURIComponent(s.id)+'?timeframe=60'];
-    const native=!!(window.StocklabCapacitor?.Capacitor?.isNativePlatform?.());
-    const get=async url=>{
-      if(native&&window.StocklabCapacitor?.CapacitorHttp){
-        const r=await window.StocklabCapacitor.CapacitorHttp.get({url,headers:{'X-API-KEY':apiKey}});
-        if(r.status!==200)throw Error('Fugle 回應 '+r.status);
-        return typeof r.data==='string'?JSON.parse(r.data):r.data;
-      }
-      const r=await fetch(url,{headers:{'X-API-KEY':apiKey},cache:'no-store'});
-      if(!r.ok)throw Error('Fugle 回應 '+r.status+'；請檢查金鑰／額度／行情權限');
-      return r.json();
-    };
-    message('讀取 Fugle 歷史 60 分 K…');
-    const history=window.StocklabAB.parseFugleHistorical(await get(urls[0]));
-    let todayBars=[];
-    try{
-      const intraday=await get(urls[1]);
-      if(Array.isArray(intraday.data)) {
-        const now=Date.now();
-        // Exclude the current unfinished candle; bar timestamps refer to candle opening times.
-        todayBars=intraday.data.filter(bar=>{
-          const ts=Date.parse(bar.date);if(!Number.isFinite(ts))return false;
-          const end=new Date(ts+3600000);
-          return end.getTime()<=now-90000 || (today===''+bar.date.slice(0,10)&&new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(now))>='13:35');
-        });
-      }
-    }catch(e){message('歷史資料已讀取，盤中資料暫時無法補齊：'+e.message);}
-    const combined=[...history,...todayBars];const dedup=new Map(combined.map(row=>[row.date,row]));
-    const bars=window.StocklabAB.cleanBars([...dedup.values()]);
-    if(bars.length<65)throw Error('H1 資料不足 65 根，請擴大查詢期間');
-    imported.set(s.id,bars);
-    $('ab-timeframe').value='H1';
-    $('ab-fugle-key').value='';
-    message('已取得 '+bars.length+' 根 H1 K 線（截至 '+bars.at(-1).date+'）；僅存本次頁面，不保留 API Key。');
-    showCurrent();
+    if(!window.StocklabAlerts?.hasCloud?.())throw Error('請先登入帳號並設定個人 Fugle Key');
+    if(!window.StocklabAlerts?.hasKey?.())throw Error('請先在個人 API 設定保存自己的 Fugle Key');
+    const s=currentStock(),uid=window.StocklabAlerts.getUid();if(!s)throw Error('尚未選擇股票');
+    message('正在以個人 Fugle Key 取得 H1 行情…');
+    const payload=await window.StocklabAlerts.getCandles(s.id);
+    if(window.StocklabAlerts.getUid()!==uid)throw Error('帳號已切換，請重新查詢');
+    const bars=window.StocklabAB.cleanBars(payload.data);
+    if(bars.length<65)throw Error((payload.market?.open===false?payload.market.reason+'，只讀取既有個人快取；':'')+'H1 資料不足 65 根');
+    imported.set(s.id,bars);$('ab-timeframe').value='H1';
+    message('已取得個人 H1 行情 '+bars.length+' 根；最後資料：'+bars.at(-1).date+(payload.cached?'（快取）':''));showCurrent();
   }
-  async function importJson(file){const obj=JSON.parse(await file.text());const s=currentStock();if(!s)throw Error('請先選擇股票');const bars=window.StocklabAB.parseFugleHistorical(obj);if(obj.symbol&&obj.symbol!==s.id)throw Error('匯入股票 '+obj.symbol+' 與目前股票 '+s.id+' 不一致');imported.set(s.id,bars);$('ab-timeframe').value='H1';message('匯入 '+bars.length+' 根 H1 歷史 K 線：'+s.id+'。請確認最後一根已收盤。');showCurrent();}
+  async function importJson(file){const obj=JSON.parse(await file.text());const s=currentStock();if(!s)throw Error('請先選擇股票');const bars=window.StocklabH1.closedBars(window.StocklabAB.parseFugleHistorical(obj));if(obj.symbol&&obj.symbol!==s.id)throw Error('匯入股票 '+obj.symbol+' 與目前股票 '+s.id+' 不一致');imported.set(s.id,bars);$('ab-timeframe').value='H1';message('匯入 '+bars.length+' 根 H1 歷史 K 線：'+s.id+'。請確認最後一根已收盤。');showCurrent();}
   function render(){if(!$('ab-current'))return;if(!currentStock()){$('ab-current').textContent='請先讀取真實股票行情。';return;}
     const s=currentStock();$('ab-stock-label').textContent=s.id+' '+(s.name||'')+' | '+(active()==='D1'?'日 K':'H1');
     if(lastStock!==s.id){lastRuns=null;$('ab-results').textContent='請點選「執行回測」。';$('ab-trades').textContent='';}
@@ -126,17 +82,18 @@
   function initialize(){
     if(!$('ab-run'))return;
     $('ab-run').onclick=()=>{try{run();}catch(e){message(e.message,true);}};
-    $('ab-fugle-load').onclick=()=>{fetchFugle().catch(e=>message(e.message+'。網頁如遇跨來源限制，請使用 Android 或匯入 JSON。',true));};
+    $('ab-fugle-load').onclick=()=>{fetchFugle().catch(e=>message(e.message,true));};
     $('ab-autorefresh').onchange=()=>{
       if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
       if($('ab-autorefresh').checked){
-        if(!$('ab-fugle-key').value.trim()&&!sessionKey){$('ab-autorefresh').checked=false;message('先輸入個人 Fugle API Key 才能啟用自動更新。',true);return;}
+        if(!window.StocklabAlerts?.hasKey?.()){$('ab-autorefresh').checked=false;message('請先登入並保存個人 Fugle Key。',true);return;}
         autoTimer=setInterval(()=>{if(!document.hidden&&$('ab').classList.contains('active')&&active()==='H1')fetchFugle().catch(e=>message(e.message,true));},60000);
         message('已開啟每 60 秒更新（僅 App／網頁在前景、A/B 策略頁開啟時執行）。');
-      } else {sessionKey='';$('ab-fugle-key').value='';message('已停止自動更新，工作階段 API Key 已清除。');}
+      } else {message('已停止自動更新。');}
     };
     $('ab-import').onchange=e=>{if(e.target.files[0])importJson(e.target.files[0]).catch(error=>message(error.message,true));e.target.value='';};
     for(const id of ['ab-timeframe','ab-mode','ab-volume-ratio','ab-institution','ab-short'])$(id).addEventListener('change',render);
+    window.addEventListener('stocklab-account-changed',()=>{imported.clear();lastRuns=null;lastStock=null;if(autoTimer)clearInterval(autoTimer);autoTimer=null;$('ab-autorefresh').checked=false;$('ab-results').textContent='請重新讀取個人 H1 行情並執行回測';$('ab-trades').textContent='';$('ab-export').disabled=true;render();});
     window.StocklabABUI={render};
     render();
   }

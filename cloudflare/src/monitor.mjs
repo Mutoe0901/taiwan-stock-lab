@@ -9,11 +9,9 @@ export function isTradingWindow(now) {
   return !['Sat','Sun'].includes(p.weekday) && (p.hour>8&&p.hour<14);
 }
 export function isScanTime(now) {
-  const p=taipeiParts(now);
-  if(['Sat','Sun'].includes(p.weekday))return false;
-  // 10:02-13:12: repeated short retries; final shortened H1 bar at 13:30.
-  if(p.hour>=10&&p.hour<=13 && [2,7,12].includes(p.minute) && (p.hour<13||p.minute<=12))return true;
-  return p.hour===13&&[36,41,46].includes(p.minute);
+  const p=taipeiParts(now),minute=p.hour*60+p.minute;
+  // One poll each minute during market hours, through the closing-bar buffer.
+  return !['Sat','Sun'].includes(p.weekday)&&minute>=540&&minute<=815;
 }
 export function closedH1(bar,now) {
   const ts=Date.parse(bar.date);

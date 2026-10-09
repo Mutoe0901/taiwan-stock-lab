@@ -2720,7 +2720,7 @@ ${financialLines}
         status(`\u5DF2\u6E96\u5099\u532F\u51FA ${name}`);
       },
       ready() {
-        el("runtime-label").textContent = native ? "v0.7.1 \xB7 Android \xB7 Big Data" : "v0.7.1 \xB7 Android \u9810\u89BD";
+        el("runtime-label").textContent = native ? "v0.7.2 \xB7 Android \xB7 Big Data" : "v0.7.2 \xB7 Android \u9810\u89BD";
         el("fetch-form").hidden = false;
         el("token").value = storedToken;
         el("remember-token").checked = true;
