@@ -1,0 +1,28 @@
+name = "taiwan-stock-lab-alerts"
+main = "src/index.mjs"
+compatibility_date = "2026-10-09"
+workers_dev = true
+preview_urls = false
+keep_vars = true
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "taiwan-stock-lab-db"
+# Existing D1 database UUID from the user's Cloudflare binding screenshot; verify on D1 Settings before deploying.
+database_id = "1b4f6832-68eb-44d4-8a29-37ab397b90de"
+
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+ALLOWED_ORIGINS = "https://taiwan-stock-lab-mutoe.mutoe-chen-2361.chatgpt.site,https://localhost"
+PUBLIC_SITE_URL = "https://taiwan-stock-lab-mutoe.mutoe-chen-2361.chatgpt.site/#ab"
+FIREBASE_PROJECT_ID = "taiwan-stock-lab-b6294"
+# Secrets stored in Cloudflare dashboard (Production):
+# FUGLE_API_KEY, FIREBASE_SERVICE_ACCOUNT_JSON, ADMIN_EMAIL

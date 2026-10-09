@@ -1,4 +1,4 @@
-/* Taiwan Stock Lab A/B interface v0.7.0 - shares existing loaded stock bundle. */
+/* Taiwan Stock Lab A/B interface v0.7.1 - shares existing loaded stock bundle. */
 (function() {
   'use strict';
   const $=id=>document.getElementById(id);
@@ -62,8 +62,19 @@
     showCurrent();
   }
   async function fetchFugle() {
+    if(window.StocklabAlerts?.hasCloud?.()) {
+      const s=currentStock();if(!s)throw Error('尚未選擇股票');
+      message('正在使用雲端已快取的 Fugle H1 行情…');
+      const payload=await window.StocklabAlerts.getCandles(s.id);
+      const bars=window.StocklabAB.cleanBars(payload.data);
+      if(bars.length<65)throw Error('雲端歷史 H1 資料尚未達 65 根；請待背景掃描初始化。');
+      imported.set(s.id,bars);$('ab-timeframe').value='H1';
+      message('已讀取雲端 H1 行情 '+bars.length+' 根；最後資料：'+bars.at(-1).date);
+      showCurrent();return;
+    }
+
     const apiKey=$('ab-fugle-key').value.trim() || sessionKey;
-    if(!apiKey)throw Error('請輸入個人 Fugle API Key；金鑰不會永久儲存。');
+    if(!apiKey)throw Error('未配對雲端時，請輸入個人 Fugle API Key；建議先啟用雲端安全保存。');
     sessionKey=apiKey;
     const s=currentStock();if(!s)throw Error('請先選擇股票');
     if(!/^[0-9A-Za-z]{4,8}$/.test(s.id))throw Error('無效股票代碼');

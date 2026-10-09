@@ -14,13 +14,13 @@ const gradlePath='android/app/build.gradle';
 const source=fs.readFileSync(gradlePath,'utf8');
 if(source.includes('stocklabStable')){console.log('Stable signer is already configured');process.exit(0);}
 const runNumber=Number.parseInt(process.env.GITHUB_RUN_NUMBER||'0',10);
-const versionCode=70000+(Number.isInteger(runNumber)&&runNumber>0?runNumber:1);
+const versionCode=71000+(Number.isInteger(runNumber)&&runNumber>0?runNumber:1);
 const stable=`
 // Taiwan Stock Lab: stable APK signing; secrets are read from environment, not stored in Git.
 android {
     defaultConfig {
         versionCode ${versionCode}
-        versionName '0.7.0'
+        versionName '0.7.1'
     }
     signingConfigs {
         stocklabStable {
