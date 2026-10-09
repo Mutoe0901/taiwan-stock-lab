@@ -47,11 +47,12 @@
 ## 維護者部署順序與資料備份
 
 1. 確認 GitHub Contents 寫入與 Actions 權限，以及官方 Cloudflare/Firebase 登入。不要將 Key、私鑰、登入密碼或驗證碼貼到對話。
-2. 在 Cloudflare 官方介面設定 `FUGLE_KEYRING_JSON` Secret，內容為版本名稱到 Base64 32-byte 隨機 AES 金鑰的 JSON map，例如結構 `{ "v1": "<由維護者安全產生的32位元組金鑰之Base64>" }`。設定 `FUGLE_KEY_VERSION=v1`。此範例是格式說明，不可直接使用。
+2. 首次執行部署腳本時，如尚無 `FUGLE_KEYRING_JSON` 且沒有既存個人密文，會在完成備份檢查後自動產生 32-byte 隨機 AES 主金鑰，隨 Worker 程式一次上傳為 Secret。已存在的主金鑰絕不覆寫；已有密文卻缺少主金鑰時停止。`FUGLE_KEY_VERSION=v1` 已設定，無須手動複製任何金鑰。
 3. 主金鑰輪替時保留舊版本，直到所有個人密文已重新加密。遺失主金鑰將無法解密個人 Fugle Key，需使用者重設。不要把主金鑰存進 GitHub 公開程式碼或 SQL 備份。
 4. 先確認 D1 UUID 與既有綁定，取得 Time Travel bookmark 並匯出完整 SQL；確認匯出包含既有六個使用者／推播資料表，再套用 `0004_personal_keys.sql`。檢查前後既有資料筆數不可下降。
 5. 只新增資料表；不 DROP、TRUNCATE、不搬移或刪除舊表，不自動把管理員 Fugle Key 套給其他人。0001–0003 保持原檔。
-6. 可在已登入的官方 Wrangler 環境執行 `npm ci`、`npm test`、`npm run deploy:worker`。部署腳本會先備份及核對，再新增資料表、檢查 Secret 名稱後部署同一 Worker。備份存於忽略追蹤且限制權限的 `.backups/`；請另外安全保存。
+6. Windows 可在更新專案後雙擊根目錄的 `DEPLOY_WORKER_v0.7.2.cmd`。它依序同步 main、安裝套件、測試、開啟 Cloudflare 官方登入頁，再執行 `npm run deploy:worker`。登入管理原 Worker 的帳號。部署腳本先核對原 D1 UUID 與 Firebase Secret，再檢查備份、舊欄位相容性、前後資料筆數，最後部署同一 Worker。任一步失敗立即停止。
+   備份存於 Git 忽略追蹤的 `.backups/`，包含首次產生的主金鑰；請私下妥善備份，Windows 另確認資料夾只有你的帳號可讀，不要上傳 GitHub 或聊天。若已在登入的終端機，可直接執行 `npm ci`、`npm test`、`npm run deploy:worker`。
 7. Worker v0.7.2 可用並完成金鑰保管設定後，才發布原網站已保存的版本；不可讓新前端接到舊 Worker。
 8. 將修改提交 GitHub main 後，Build Android APK 會執行回歸、固定簽章、建置並上傳 APK artifact。APK 下載位置是該次 Actions 成功執行的 Artifacts，沒有成功 run 就沒有新版 APK。
 9. 實測兩個 Google 帳號各自 Key、各自股票、Chrome 前景／背景、Android 同帳號不同裝置；確認 FCM 送達而不是只有 HTTP 接受。
@@ -63,4 +64,5 @@
 - https://accessibility.twse.com.tw/zh/trading/holiday.html
 - https://developers.cloudflare.com/d1/reference/time-travel/
 - https://developers.cloudflare.com/workers/wrangler/commands/d1/
+- https://developers.cloudflare.com/workers/configuration/secrets/ （`deploy --secrets-file` 僅新增／更新列出的 Secret，不刪除未列出的 Secret）
 - https://developers.cloudflare.com/changelog/post/2026-02-11-subrequests-limit/
