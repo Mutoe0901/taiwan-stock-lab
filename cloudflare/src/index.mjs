@@ -40,6 +40,27 @@ async function sendFcm(env,access,token,ev){
   if(!r.ok){const msg=await r.text();if([400,404].includes(r.status)&&/UNREGISTERED|registration-token-not-registered/.test(msg))return {invalid:true};throw Error('FCM HTTP '+r.status);}
   return {invalid:false};
 }
+
+// Deliberately separate from the real trading-event pipeline: no event rows are created.
+function buildTestMessage(token){
+ return {message:{token,
+   notification:{title:'\u53f0\u80a1\u7814\u7a76\u5ba4\uff5cWorker \u6e2c\u8a66\u901a\u77e5',body:'Cloudflare Worker \u2192 Firebase \u2192 Android \u63a8\u64ad\u6e2c\u8a66'},
+   data:{type:'test',source:'cloudflare-worker'},
+   android:{priority:'HIGH',notification:{channel_id:'stocklab_signals',tag:'stocklab_worker_test'}}
+ }};
+}
+async function sendTestFcm(env,access,token){
+ const r=await fetch('https://fcm.googleapis.com/v1/projects/'+encodeURIComponent(env.FIREBASE_PROJECT_ID)+'/messages:send',{
+   method:'POST',headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify(buildTestMessage(token))
+ });
+ if(!r.ok){
+   const message=await r.text();
+   if([400,404].includes(r.status)&&/UNREGISTERED|registration-token-not-registered/.test(message))return {invalid:true};
+   throw Error('FCM HTTP '+r.status);
+ }
+ return {invalid:false};
+}
+
 const dayTW=now=>taipeiParts(now).date;
 function previousDay(now){const p=dayTW(now);return dayTW(Date.parse(p+'T00:00:00+08:00')-86400000);}
 async function getFugle(path,env){const r=await fetch(BASE+path,{headers:{'X-API-KEY':env.FUGLE_API_KEY}});if(!r.ok)throw Error('Fugle HTTP '+r.status);return r.json();}
@@ -148,6 +169,21 @@ async function route(request,env){
     if(path==='/api/health'&&request.method==='GET'){
       const h=await env.DB.prepare('SELECT last_run,last_ok FROM health WHERE id=1').first();return respond({worker:'v0.7.1',...h},200,corsHeaders);
     }
+
+    if(path==='/api/admin/test-push'&&request.method==='POST'){
+      if(user.role!=='admin')return respond({error:'\u50c5\u7ba1\u7406\u54e1\u53ef\u6e2c\u8a66\u63a8\u64ad'},403,corsHeaders);
+      const device=await env.DB.prepare("SELECT token_hash,fcm_token FROM user_subscriptions WHERE uid=? AND platform='android' AND active=1 ORDER BY updated_at DESC LIMIT 1").bind(user.uid).first();
+      if(!device)return respond({error:'\u627e\u4e0d\u5230\u672c\u5e33\u865f\u5df2\u555f\u7528\u7684 Android \u8a02\u95b1'},404,corsHeaders);
+      const now=Date.now();
+      const claimed=await env.DB.prepare('INSERT INTO push_test_requests(uid,last_attempt_ms) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET last_attempt_ms=excluded.last_attempt_ms WHERE push_test_requests.last_attempt_ms<?').bind(user.uid,now,now-60000).run();
+      if(!claimed.meta?.changes)return respond({error:'\u8acb\u7b49\u5f85 60 \u79d2\u518d\u6e2c\u8a66'},429,corsHeaders);
+      const result=await sendTestFcm(env,await oauth(env),device.fcm_token);
+      if(result.invalid){
+        await env.DB.prepare('UPDATE user_subscriptions SET active=0 WHERE token_hash=? AND uid=?').bind(device.token_hash,user.uid).run();
+        return respond({error:'FCM Token \u5df2\u5931\u6548\uff0c\u8acb\u91cd\u65b0\u8a02\u95b1'},410,corsHeaders);
+      }
+      return respond({sent:true,platform:'android',test:true},200,corsHeaders);
+    }
     if(path==='/api/admin/invites'&&user.role==='admin'&&request.method==='POST'){
       const v=await body(request),email=cleanEmail(v.email);
       await env.DB.prepare('INSERT INTO invites(email,invited_by) VALUES(?,?) ON CONFLICT(email) DO UPDATE SET active=1').bind(email,user.uid).run();
@@ -161,4 +197,4 @@ async function route(request,env){
   }catch(error){return respond({error:String(error.message).slice(0,180)},400,corsHeaders);}
 }
 export default {fetch:route,scheduled(controller,env,ctx){ctx.waitUntil(scheduled(env,Date.now()));}};
-export const __test={symbolsOf,flagsOf,strategiesOf,cleanEmail,cloudCredentials,scheduled,identify};
+export const __test={symbolsOf,flagsOf,strategiesOf,cleanEmail,cloudCredentials,scheduled,identify,buildTestMessage};

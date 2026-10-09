@@ -67,7 +67,7 @@ async function api(path,{method='GET',data}={}){
 function chosenFlags(){return ['BUY IN','SELL IN','PROFIT OUT','FAIL OUT'].reduce((obj,k)=>(obj[k]=!!$('alerts-'+k.replace(/ /g,'-'))?.checked,obj),{});}
 function choices(){return ['A','B'].filter(k=>$('alerts-strategy-'+k)?.checked);}
 function display(x){$('alerts-symbols').value=(x.symbols||[]).join(',');$('alerts-ratio').value=x.volumeRatio;for(const [k,v] of Object.entries(x.flags||{})){const input=$('alerts-'+k.replace(/ /g,'-'));if(input)input.checked=v;}for(const k of ['A','B'])$('alerts-strategy-'+k).checked=(x.strategies||[]).includes(k);}
-async function connect(){const v=await api('/api/settings');currentRole=v.role;display(v);$('alerts-user').textContent='已登入：'+v.email+(v.role==='admin'?'（管理員）':'（親友）');$('alerts-invite-panel').hidden=v.role!=='admin';write('已連接個人雲端監控；資料與其他使用者隔離。');}
+async function connect(){const v=await api('/api/settings');currentRole=v.role;display(v);$('alerts-user').textContent='已登入：'+v.email+(v.role==='admin'?'（管理員）':'（親友）');$('alerts-invite-panel').hidden=v.role!=='admin';if($('alerts-test-push'))$('alerts-test-push').hidden=v.role!=='admin';write('已連接個人雲端監控；資料與其他使用者隔離。');}
 async function signGoogle(){
  await firebase();
  const cap=globalThis.StocklabCapacitor;
@@ -111,7 +111,7 @@ async function linkPassword(){
 async function sendVerification(){await firebase();if(!currentUser)throw Error('請先登入');await authSDK.sendEmailVerification(currentUser);write('驗證信已寄出，請完成驗證後重新登入。');}
 async function signout(){
  await api('/api/unregister-all',{method:'POST'});
- await authSDK.signOut(auth);pushToken='';currentRole='';$('alerts-invite-panel').hidden=true;
+ await authSDK.signOut(auth);pushToken='';currentRole='';$('alerts-invite-panel').hidden=true;if($('alerts-test-push'))$('alerts-test-push').hidden=true;
  write('已登出並停用此帳號所有裝置的推播。若需恢復，請在各裝置重新訂閱。');
 }
 
@@ -120,6 +120,7 @@ async function registerAndroid(){const cap=globalThis.StocklabCapacitor;if(!cap?
  const Push=cap.registerPlugin?.('PushNotifications');if(!Push)throw Error('請先安裝整合 Firebase 的新版 APK');
  await Push.addListener('registration',async ({value})=>{try{pushToken=value;await api('/api/register',{method:'POST',data:{token:value,platform:'android'}});write('此 Android 裝置已訂閱個人交易訊號');}catch(err){write(err.message,true);}});
  await Push.addListener('registrationError',()=>write('Android FCM 註冊失敗',true));
+ await Push.addListener('pushNotificationReceived',notice=>write('Firebase push: '+(notice.title||'')+' '+(notice.body||'')));
  await Push.createChannel({id:'stocklab_signals',name:'台股交易訊號',description:'H1 A/B 雙策略訊號',importance:4,visibility:1});
  let p=await Push.checkPermissions();if(p.receive!=='granted')p=await Push.requestPermissions();if(p.receive!=='granted')throw Error('請允許手機通知權限');await Push.register();return true;
 }
@@ -134,6 +135,13 @@ async function register(){await api('/api/settings');if(!await registerAndroid()
 async function health(){const h=await api('/api/health');write('最後成功監控：'+(h.last_ok||'尚無')+'；上次執行：'+(h.last_run||'尚無'));}
 async function candles(symbol){return api('/api/candles?symbol='+encodeURIComponent(symbol));}
 async function invite(){const email=$('alerts-invite').value.trim();const v=await api('/api/admin/invites',{method:'POST',data:{email}});write('已將 '+v.email+' 加入允許名單；對方仍需先建立 Firebase 帳號並完成信箱驗證。');$('alerts-invite').value='';}
+
+async function testWorkerPush(){
+ if(currentRole!=='admin')throw Error('\u50c5\u7ba1\u7406\u54e1\u53ef\u6e2c\u8a66\u63a8\u64ad');
+ const result=await api('/api/admin/test-push',{method:'POST'});
+ if(result.sent)write('\u5df2\u7531 Cloudflare Worker \u9001\u51fa\u6e2c\u8a66\u901a\u77e5\uff1b\u8acb\u6aa2\u67e5 Android \u624b\u6a5f\u901a\u77e5\u3002');
+}
+
 function bind(id,fn){const el=$(id);if(el)el.onclick=()=>{write('正在處理「'+el.textContent.trim()+'」…');Promise.resolve().then(fn).catch(e=>write(readableError(e),true));};}
 function init(){if(!$('alerts-connect'))return;
  $('alerts-google').textContent='使用 Google 帳號登入（Android／網頁）';
@@ -150,6 +158,11 @@ function init(){if(!$('alerts-connect'))return;
  const info=document.createElement('p');info.className='caption';
  info.textContent='建議直接點「使用 Google 帳號登入」；Android 會顯示 Google 帳號選擇畫面。信箱密碼為備用方式，請勿填入 Gmail 密碼。登入成功後再啟用本機推播。';
  $('alerts-email-login').parentElement.insertAdjacentElement('afterend',info);
+
+ const testButton=document.createElement('button');testButton.type='button';testButton.id='alerts-test-push';testButton.hidden=true;
+ testButton.textContent='\u767c\u9001 Worker \u6e2c\u8a66\u63a8\u64ad\uff08\u7ba1\u7406\u54e1\uff09';
+ $('alerts-health').insertAdjacentElement('afterend',testButton);
+ bind('alerts-test-push',testWorkerPush);
  bind('alerts-connect',connect);bind('alerts-google',signGoogle);bind('alerts-email-login',signEmail);bind('alerts-verify',sendVerification);bind('alerts-link-password',linkPassword);bind('alerts-logout',signout);bind('alerts-save',save);bind('alerts-register',register);bind('alerts-health',health);bind('alerts-invite-add',invite);$('alerts-invite-panel').hidden=true;
  if(!cfg.workerUrl||!cfg.firebase?.projectId)write('尚未設定 Worker/Firebase，推播目前未啟用。');else firebase().catch(e=>write(readableError(e),true));}
 window.StocklabAlerts={hasCloud:()=>!!currentUser?.emailVerified&&!!currentRole&&!!cfg.workerUrl,getCandles:candles};
