@@ -62,6 +62,7 @@ jobs:
           npm run test:ab
           npm run build:worker
           npm run test:alerts
+          node --test tests/google-native-login.test.cjs
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -93,6 +94,9 @@ jobs:
           fi
           printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON_BASE64" | base64 -d > android/app/google-services.json
           node -e "const c=require('./android/app/google-services.json');if(!c.project_info?.project_id||!c.client?.length)process.exit(1);"
+
+      - name: Configure native Google sign-in and Gradle
+        run: node scripts/patch-android-google-auth.mjs
 
       - name: Add direct ChatGPT launcher
         run: node scripts/patch-android-chatgpt.mjs
