@@ -3,7 +3,38 @@
 'use strict';
 const cfg=globalThis.STOCKLAB_ALERTS_CONFIG||{},$=id=>document.getElementById(id);
 let app,auth,authSDK,currentUser=null,currentRole='',pushToken='';
-const write=(value,bad=false)=>{const el=$('alerts-status');if(el){el.textContent=String(value);el.style.color=bad?'#bf404a':'';}};
+function readableError(e){
+ const code=String(e?.code||'');
+ const labels={
+  'auth/network-request-failed':'無法連接 Firebase，請檢查手機網路及 Android WebView 是否允許連線。',
+  'auth/invalid-email':'電子郵件格式不正確。',
+  'auth/invalid-credential':'信箱或密碼錯誤；如首次使用，請先建立帳號。',
+  'auth/wrong-password':'密碼錯誤。',
+  'auth/user-not-found':'找不到帳號，請先使用「建立信箱密碼帳號」。',
+  'auth/email-already-in-use':'這個信箱已建立 Firebase 帳號。如先前用 Google 登入，需先透過網頁登入並連結獨立密碼；不要輸入 Google 密碼。',
+  'auth/operation-not-allowed':'Firebase 尚未啟用信箱／密碼登入。',
+  'auth/weak-password':'密碼強度不足，請設定至少 12 字元的獨立密碼。',
+  'auth/too-many-requests':'請求過於頻繁，請稍後再試。',
+  'auth/unauthorized-domain':'Firebase 尚未授權目前登入網域。',
+  'auth/popup-blocked':'登入視窗被封鎖，請用電腦瀏覽器重試。'
+ };
+ if(labels[code])return labels[code];
+ return String(e?.message||e||'未知錯誤');
+}
+let toastTimer;
+function write(value,bad=false){
+ const message=String(value);const el=$('alerts-status');
+ if(el){el.textContent=message;el.style.color=bad?'#bf404a':'';}
+ let toast=$('alerts-mobile-feedback');
+ if(!toast){
+  toast=document.createElement('div');toast.id='alerts-mobile-feedback';toast.setAttribute('role','status');
+  Object.assign(toast.style,{position:'fixed',left:'12px',right:'12px',bottom:'92px',zIndex:'999999',padding:'14px 16px',borderRadius:'12px',boxShadow:'0 4px 24px #0005',fontSize:'15px',lineHeight:'1.5',fontWeight:'600',overflowWrap:'anywhere',whiteSpace:'pre-wrap',pointerEvents:'auto',maxHeight:'40vh',overflowY:'auto'});
+  toast.addEventListener('click',()=>{toast.style.display='none';});
+  document.body.appendChild(toast);
+ }
+ toast.textContent=message;toast.style.display='block';toast.style.background=bad?'#fff0ef':'#e7faf4';toast.style.color=bad?'#84231e':'#075c4b';
+ clearTimeout(toastTimer);toastTimer=setTimeout(()=>{toast.style.display='none';},9000);
+}
 const endpoint=()=>{const url=(cfg.workerUrl||'').replace(/\/$/,'');if(!/^https:\/\/[^/]+$/.test(url))throw Error('請先設定 alerts-config.js 的 Worker 網址');return url;};
 async function firebase(){
  if(auth)return;
@@ -29,7 +60,22 @@ function choices(){return ['A','B'].filter(k=>$('alerts-strategy-'+k)?.checked);
 function display(x){$('alerts-symbols').value=(x.symbols||[]).join(',');$('alerts-ratio').value=x.volumeRatio;for(const [k,v] of Object.entries(x.flags||{})){const input=$('alerts-'+k.replace(/ /g,'-'));if(input)input.checked=v;}for(const k of ['A','B'])$('alerts-strategy-'+k).checked=(x.strategies||[]).includes(k);}
 async function connect(){const v=await api('/api/settings');currentRole=v.role;display(v);$('alerts-user').textContent='已登入：'+v.email+(v.role==='admin'?'（管理員）':'（親友）');$('alerts-invite-panel').hidden=v.role!=='admin';write('已連接個人雲端監控；資料與其他使用者隔離。');}
 async function signGoogle(){await firebase();if(globalThis.StocklabCapacitor?.Capacitor?.isNativePlatform?.())throw Error('Android 版請使用電子郵件與密碼登入；Google 原生登入需另行整合 SHA-1。');await authSDK.signInWithPopup(auth,new authSDK.GoogleAuthProvider());}
-async function signEmail(){await firebase();const email=$('alerts-email').value.trim(),password=$('alerts-password').value;await authSDK.signInWithEmailAndPassword(auth,email,password);$('alerts-password').value='';}
+async function signEmail(){await firebase();const email=$('alerts-email').value.trim(),password=$('alerts-password').value;if(!email||!password)throw Error('請先填寫 Firebase 信箱和密碼；如首次使用請按「建立信箱密碼帳號」。');await authSDK.signInWithEmailAndPassword(auth,email,password);$('alerts-password').value='';write('Firebase 登入成功，正在取得你的雲端設定…');}
+async function signUpEmail(){
+ await firebase();const email=$('alerts-email').value.trim(),password=$('alerts-password').value;
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('請輸入有效的信箱。');
+ if(password.length<12)throw Error('請建立至少 12 字元的獨立密碼，切勿填入 Gmail 密碼。');
+ const result=await authSDK.createUserWithEmailAndPassword(auth,email,password);
+ await authSDK.sendEmailVerification(result.user);
+ $('alerts-password').value='';
+ write('帳號已建立並寄出驗證信。請到信箱點開驗證連結，再回 App 點「重新確認驗證」；這不是你的 Gmail 密碼。');
+}
+async function refreshVerification(){
+ await firebase();if(!auth.currentUser)throw Error('請先登入 Firebase。');
+ await auth.currentUser.reload();currentUser=auth.currentUser;
+ if(!currentUser.emailVerified)throw Error('尚未驗證信箱，請先點擊驗證郵件裡的連結。');
+ await currentUser.getIdToken(true);write('信箱已驗證，正在連線你的台股監控設定…');await connect();
+}
 async function linkPassword(){
  await firebase();if(!currentUser?.emailVerified)throw Error('請先以 Google 登入並完成驗證');
  const password=$('alerts-password').value;
@@ -63,9 +109,23 @@ async function register(){await api('/api/settings');if(!await registerAndroid()
 async function health(){const h=await api('/api/health');write('最後成功監控：'+(h.last_ok||'尚無')+'；上次執行：'+(h.last_run||'尚無'));}
 async function candles(symbol){return api('/api/candles?symbol='+encodeURIComponent(symbol));}
 async function invite(){const email=$('alerts-invite').value.trim();const v=await api('/api/admin/invites',{method:'POST',data:{email}});write('已將 '+v.email+' 加入允許名單；對方仍需先建立 Firebase 帳號並完成信箱驗證。');$('alerts-invite').value='';}
-function bind(id,fn){const el=$(id);if(el)el.onclick=()=>Promise.resolve().then(fn).catch(e=>write(e.message,true));}
-function init(){if(!$('alerts-connect'))return;bind('alerts-connect',connect);bind('alerts-google',signGoogle);bind('alerts-email-login',signEmail);bind('alerts-verify',sendVerification);bind('alerts-link-password',linkPassword);bind('alerts-logout',signout);bind('alerts-save',save);bind('alerts-register',register);bind('alerts-health',health);bind('alerts-invite-add',invite);$('alerts-invite-panel').hidden=true;
- if(!cfg.workerUrl||!cfg.firebase?.projectId)write('尚未設定 Worker/Firebase，推播目前未啟用。');else firebase().catch(e=>write(e.message,true));}
+function bind(id,fn){const el=$(id);if(el)el.onclick=()=>{write('正在處理「'+el.textContent.trim()+'」…');Promise.resolve().then(fn).catch(e=>write(readableError(e),true));};}
+function init(){if(!$('alerts-connect'))return;
+ if(!$('alerts-email-signup')){
+  const b=document.createElement('button');b.id='alerts-email-signup';b.type='button';b.textContent='第一次使用：建立信箱密碼帳號';
+  $('alerts-email-login').insertAdjacentElement('afterend',b);
+  bind('alerts-email-signup',signUpEmail);
+ }
+ if(!$('alerts-verify-refresh')){
+  const b=document.createElement('button');b.id='alerts-verify-refresh';b.type='button';b.textContent='重新確認驗證';
+  $('alerts-verify').insertAdjacentElement('afterend',b);
+  bind('alerts-verify-refresh',refreshVerification);
+ }
+ const info=document.createElement('p');info.className='caption';
+ info.textContent='Android 首次使用：輸入信箱及自行設定的獨立密碼 → 建立信箱密碼帳號 → 收信驗證 → 重新確認驗證 → 啟用本機推播。Google 登入僅供網頁版使用。';
+ $('alerts-email-login').parentElement.insertAdjacentElement('afterend',info);
+ bind('alerts-connect',connect);bind('alerts-google',signGoogle);bind('alerts-email-login',signEmail);bind('alerts-verify',sendVerification);bind('alerts-link-password',linkPassword);bind('alerts-logout',signout);bind('alerts-save',save);bind('alerts-register',register);bind('alerts-health',health);bind('alerts-invite-add',invite);$('alerts-invite-panel').hidden=true;
+ if(!cfg.workerUrl||!cfg.firebase?.projectId)write('尚未設定 Worker/Firebase，推播目前未啟用。');else firebase().catch(e=>write(readableError(e),true));}
 window.StocklabAlerts={hasCloud:()=>!!currentUser?.emailVerified&&!!currentRole&&!!cfg.workerUrl,getCandles:candles};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
