@@ -23,10 +23,13 @@ function scenario(settings={}){
  else if(a[1]==='execute'&&a.includes('--file'))fs.writeFileSync('migrated','yes');
  else if(a[1]==='execute'){
   const q=a[a.indexOf('--command')+1];
+  // Reproduce production's compound SELECT limit; separate statements remain valid.
+  if((q.match(/UNION ALL/g)||[]).length>=5||s.queryFailure){out({error:{notes:[{text:'too many terms in compound SELECT: SQLITE_ERROR'}],privateValue:'test-secret-must-not-be-printed'}});process.exit(1);}
   if(s.badColumns&&q.includes('LIMIT 0'))process.exit(1);
   if(q.includes('sqlite_master'))rows(s.encrypted?[{name:'user_credentials'}]:[]);
   else if(q==='SELECT count(*) AS n FROM user_credentials')rows([{n:3}]);
-  else rows(tables.filter(t=>!(s.missingAfter&&fs.existsSync('migrated')&&t==='user_subscriptions')).map(name=>({name,n:s.dropRows&&fs.existsSync('migrated')?1:2})));
+  else if(q.includes('LIMIT 0'))out(q.split(';').filter(Boolean).map(()=>({success:true,results:[]})));
+  else out(tables.filter(t=>!(s.missingAfter&&fs.existsSync('migrated')&&t==='user_subscriptions')).map(name=>({success:true,results:[{name,n:s.dropRows&&fs.existsSync('migrated')?1:2}]})));
  }else if(a[0]==='deploy'){
   if(a.includes('--secrets-file')){const p=JSON.parse(fs.readFileSync(a[a.indexOf('--secrets-file')+1]));const k=JSON.parse(p.FUGLE_KEYRING_JSON);if(Buffer.from(k.v1,'base64').length!==32)process.exit(3);}
   console.log('Deployed test Worker (no network)');
@@ -46,4 +49,5 @@ test('first deployment backs up before migration and supplies a private 256-bit 
  const s=scenario();try{assert.equal(s.result.status,0,s.result.stderr);assert.ok(s.calls.findIndex(a=>a[1]==='export')<s.calls.findIndex(a=>a.includes('--file')));assert.ok(s.calls.at(-1).includes('--secrets-file'));const raw=readFileSync(path.join(s.backup,'worker-secrets.json'),'utf8');const key=JSON.parse(JSON.parse(raw).FUGLE_KEYRING_JSON).v1;assert.equal(Buffer.from(key,'base64').length,32);assert.ok(!s.result.stdout.includes(key));assert.ok(!s.result.stderr.includes(key));assert.ok(!JSON.stringify(s.calls).includes(key));}finally{s.clean();}
 });
 test('an existing keyring is preserved and never replaced',()=>{const s=scenario({hasKeyring:true});try{assert.equal(s.result.status,0,s.result.stderr);assert.ok(!s.calls.at(-1).includes('--secrets-file'));assert.ok(!readdirSync(s.backup).includes('worker-secrets.json'));}finally{s.clean();}});
+test('D1 compound SELECT errors are actionable without exposing raw response secrets',()=>{const s=scenario({queryFailure:true});try{assert.notEqual(s.result.status,0);assert.match(s.result.stderr,/too many terms in compound SELECT/);assert.ok(!s.result.stderr.includes('test-secret-must-not-be-printed'));assert.ok(!s.result.stdout.includes('test-secret-must-not-be-printed'));assert.equal(s.calls.some(a=>a.includes('--file')),false);}finally{s.clean();}});
 for(const options of [{dropRows:true},{missingAfter:true}])test('record loss or missing post-migration counts block Worker publication '+JSON.stringify(options),()=>{const s=scenario({...options,hasKeyring:true});try{assert.notEqual(s.result.status,0);assert.ok(s.calls.some(a=>a.includes('--file')));assert.equal(s.calls.some(a=>a[0]==='deploy'),false);}finally{s.clean();}});

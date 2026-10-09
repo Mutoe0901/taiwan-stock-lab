@@ -10,7 +10,7 @@
 | 自動化測試 | 功能提交的 GitHub Actions 43 項通過；原 Site 含額外回歸共 55 項通過（含重疊，不可相加）；另補部署保護測試 |
 | SQLite migration／隔離 | 通過；只在記憶體測試資料庫執行 |
 | Worker 打包 | esbuild 與 Wrangler dry-run 通過；dry-run 不等於部署 |
-| 正式 D1 備份及 migration | 尚未執行；現有使用者／訂閱資料未變更 |
+| 正式 D1 備份及 migration | 使用者 Windows 執行紀錄已確認完整 SQL 匯出成功；首次執行在遷移前的 UNION ALL 查詢遇 D1 複合 SELECT 限制而停止，migration 尚未執行。已改為各表獨立 SELECT，待重新執行 |
 | Cloudflare 正式部署 | 未完成：使用者已完成裝置授權，但執行環境政策阻擋 dash.cloudflare.com 的授權回傳；Wrangler 仍未登入 |
 | Android | Actions #19 成功；v0.7.2／versionCode 72019；沿用既有 Firebase 與固定簽章 Secrets；APK 簽章驗證通過 |
 | 原網站 | 原 project_id 與網址保留；v0.7.2 源碼待 Worker 就緒後發布，避免前後端版本不相容 |
@@ -30,4 +30,4 @@
 - 逐分鐘是排程目標；Cloudflare CPU／D1／共享外部請求、Fugle 限流與網路仍需正式壓測。容量不足會輪替。
 - 只內建 2026 官方休市日。未知年度安全停抓；臨時休市由維護者更新設定，尚無自動即時公告辨識。
 - 測試不會使用私人 Key 或真實 Firebase 私鑰，不等同真實 Fugle、Google 登入或 FCM 送達測試。
-- 原資料庫尚未操作，因此不能宣稱已確認正式資料備份或資料遷移成功。
+- 正式 SQL 備份下載成功有使用者截圖佐證；代理未取得該私人備份內容。尚無資料遷移／Worker 部署成功證明。

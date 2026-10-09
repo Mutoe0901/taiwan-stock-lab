@@ -6,7 +6,12 @@ import path from 'node:path';
 const cfg=['--config','cloudflare/wrangler.toml'];
 function wrangler(args,capture=false){
  const r=spawnSync(process.execPath,['node_modules/wrangler/bin/wrangler.js',...args,...cfg],{encoding:'utf8',stdio:capture?['ignore','pipe','pipe']:'inherit',env:{...process.env,WRANGLER_SEND_METRICS:'false'}});
- if(r.status!==0)throw Error('Cloudflare step failed; deployment stopped: '+args.slice(0,2).join(' '));return r.stdout||'';
+ if(r.status!==0){
+  // Report only known diagnostic phrases, never raw upstream output or secret values.
+  const output=(r.stderr||'')+'\n'+(r.stdout||'');
+  const detail=output.match(/too many terms in compound SELECT|no such table: [a-z_]+|no such column: [a-z_]+|SQLITE_[A-Z_]+|D1_[A-Z_]+|Authentication error|permission denied|database is locked/gi);
+  throw Error('Cloudflare step failed; deployment stopped: '+args.slice(0,2).join(' ')+(detail?.length?' — '+[...new Set(detail)].join('; '):''));
+ }return r.stdout||'';
 }
 const db='taiwan-stock-lab-db',stamp=new Date().toISOString().replace(/[:.]/g,'-');
 const folder=path.resolve('.backups',stamp);mkdirSync(folder,{recursive:true,mode:0o700});chmodSync(folder,0o700);
@@ -25,7 +30,9 @@ const sql=readFileSync(backup,'utf8');
 for(const table of ['users','user_settings','user_subscriptions','user_events','user_deliveries','push_test_requests']){
  if(!new RegExp('CREATE TABLE[^;]*["`\\s]'+table+'["`\\s(]','i').test(sql))throw Error('Missing existing schema '+table+'; stop before migration');
 }
-const query="SELECT 'users' AS name,count(*) AS n FROM users UNION ALL SELECT 'user_settings',count(*) FROM user_settings UNION ALL SELECT 'user_subscriptions',count(*) FROM user_subscriptions UNION ALL SELECT 'user_events',count(*) FROM user_events UNION ALL SELECT 'user_deliveries',count(*) FROM user_deliveries UNION ALL SELECT 'push_test_requests',count(*) FROM push_test_requests";
+// Each table is a separate statement. Compound SELECT terms are limited on D1.
+const query=['users','user_settings','user_subscriptions','user_events','user_deliveries','push_test_requests']
+ .map(table=>`SELECT '${table}' AS name,count(*) AS n FROM ${table}`).join('; ')+';';
 const before=wrangler(['d1','execute',db,'--remote','--command',query,'--json'],true);
 writeFileSync(path.join(folder,'counts-before.json'),before,{mode:0o600});
 const counts=raw=>{const parsed=JSON.parse(raw);if(!Array.isArray(parsed)||parsed.some(x=>x.success===false||!Array.isArray(x.results)))throw Error('Unexpected D1 response; stopped');return parsed.flatMap(x=>x.results);};
