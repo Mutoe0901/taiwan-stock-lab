@@ -1,33 +1,37 @@
-# v0.7.2 交付狀態（2026-10-10）
+# v0.7.2 交付狀態（2026-10-10 10:08，台灣時間）
 
-程式已提交 GitHub main，Android APK 已建置成功。Worker 與原網站仍待正式部署。
+功能已提交 GitHub main；使用者已完成 Cloudflare Worker 部署，原網站已發布 v0.7.2，Android APK 已建置。正式帳號登入、個人 Key 與實機推播驗收仍待完成。
 
 | 項目 | 狀態 |
 |---|---|
-| GitHub 起點 | main f48d2b4cabf1f2f3b390ba573abea9d7c48d7d13 |
-| GitHub 功能提交 | 已完成：fa7e19fd0168bcd44b53e44f8529a9589c901ca7 |
-| 個人 Fugle Key／分鐘監控／介面 | 程式已完成；需正式 Worker 升級 |
-| 自動化測試 | 功能提交的 GitHub Actions 43 項通過；原 Site 含額外回歸共 55 項通過（含重疊，不可相加）；另補部署保護測試 |
-| SQLite migration／隔離 | 通過；只在記憶體測試資料庫執行 |
-| Worker 打包 | esbuild 與 Wrangler dry-run 通過；dry-run 不等於部署 |
-| 正式 D1 備份及 migration | 使用者 Windows 執行紀錄已確認完整 SQL 匯出成功；首次執行在遷移前的 UNION ALL 查詢遇 D1 複合 SELECT 限制而停止，migration 尚未執行。已改為各表獨立 SELECT，待重新執行 |
-| Cloudflare 正式部署 | 未完成：使用者已完成裝置授權，但執行環境政策阻擋 dash.cloudflare.com 的授權回傳；Wrangler 仍未登入 |
-| Android | Actions #19 成功；v0.7.2／versionCode 72019；沿用既有 Firebase 與固定簽章 Secrets；APK 簽章驗證通過 |
-| 原網站 | 原 project_id 與網址保留；v0.7.2 源碼待 Worker 就緒後發布，避免前後端版本不相容 |
-| Web Push 註冊／送達 | VAPID 格式、SW 帳號隔離、token API、FCM 模擬發送通過；正式註冊與實機送達未驗證 |
-| Firebase 正式設定 | 此次未完成官方控制台核對；沿用既有公開 config／VAPID，不重設 Android 設定 |
+| GitHub 功能提交 | fa7e19fd0168bcd44b53e44f8529a9589c901ca7 |
+| 已部署程式／APK 來源 | df339758d934611259bffaeddd4413e654086a7c |
+| 個人 Fugle Key／分鐘監控／介面 | 程式已上線；個人帳號實測待完成 |
+| 自動化測試 | Actions #21 完整 53 項通過、0 失敗；原 Site 55 項通過（含重疊，不可相加） |
+| SQLite migration／隔離 | 記憶體測試通過；正式遷移由使用者電腦執行 |
+| 正式 D1 備份及 migration | 截圖確認 SQL 匯出成功、0004 執行 9 項查詢成功；腳本通過前後既有記錄數檢查後進入部署。代理未讀取私人 SQL 備份 |
+| Cloudflare 正式部署 | 使用者在官方 Wrangler 重試成功；2026-10-10 10:05 截圖出現 Current Version ID，10:06 使用者確認成功。完整 UUID 未收集；尚未以登入後 API 獨立驗收 |
+| Android | Actions #21 成功；versionName 0.7.2、versionCode 72021；保留既有 Firebase／固定簽章，APK v1／v2 簽章驗證通過 |
+| 原網站 | Sites version 12 部署 succeeded；deployment appgdep_6ac99e0123748191a1f5a32d5191c7f6，2026-10-10 02:08:20 UTC |
+| 原網址 | https://taiwan-stock-lab-mutoe.mutoe-chen-2361.chatgpt.site |
+| Web Push 註冊／送達 | 自動化檢查通過；正式瀏覽器註冊、前景／背景與 Android 實機送達仍未驗證 |
+| Firebase 正式設定 | 沿用既有設定，未重設使用者或 Android 設定；官方控制台未獨立核對 |
 
-## 尚需官方授權／操作
+## 尚需本人實機驗收
 
-- GitHub：Mutoe0901 帳號的寫入權限已確認，提交與 Actions 都已完成。
-- Cloudflare：因代理執行環境的連線限制，請在自己的電腦更新專案後執行 `DEPLOY_WORKER_v0.7.2.cmd`，透過官方 Wrangler 登入原帳號並安全部署。腳本先備份、核對相容性，首次缺少主金鑰且無既存密文才自動建立 Secret；不要提供 Secret 值至聊天。
-- 完成後由部署腳本進行同 Worker 升級，核對版本；再發布原 Site 已保存的新版。
-- APK：[Actions #19](https://github.com/Mutoe0901/taiwan-stock-lab/actions/runs/37971145727) → Artifacts → taiwan-stock-lab-debug-apk（保存至 2026-11-08）。程式已建置，實機登入、覆蓋安裝與推播仍需驗證；個人 Fugle 功能需等待新版 Worker。
-- 本人／第二帳號各在網站輸入自己的 Fugle Key（不要貼對話）；Chrome／Pixel 各自啟用推播並核對通知中心。
+1. 開啟原網站，確認 v0.7.2，進入「05 A/B 策略」以 Google 登入。
+2. 在網站輸入本人的 Fugle Key，按「驗證並加密保存」，重新登入後確認仍顯示已設定。不要把 Key 貼到聊天。
+3. 按「啟用本機推播」並允許通知，再按「測試本機網頁推播」；核對「本瀏覽器已收到」及系統通知中心，另驗證背景接收。
+4. 安裝下方 APK，以相同 Google 帳號登入並啟用推播，按「測試本機 Android 推播」，核對手機通知中心。
+5. 第二個 Google 帳號使用自己的 Key 與股票清單，驗證帳號隔離。交易日再核對 H1 行情及雲端監控狀態。
 
-## 重要限制
+APK：[Actions #21](https://github.com/Mutoe0901/taiwan-stock-lab/actions/runs/37974026970) → Artifacts → taiwan-stock-lab-debug-apk。Artifact ID 11637313634，保存至 2026-11-08；下載 ZIP 後解壓安裝 APK。
 
-- 逐分鐘是排程目標；Cloudflare CPU／D1／共享外部請求、Fugle 限流與網路仍需正式壓測。容量不足會輪替。
-- 只內建 2026 官方休市日。未知年度安全停抓；臨時休市由維護者更新設定，尚無自動即時公告辨識。
-- 測試不會使用私人 Key 或真實 Firebase 私鑰，不等同真實 Fugle、Google 登入或 FCM 送達測試。
-- 正式 SQL 備份下載成功有使用者截圖佐證；代理未取得該私人備份內容。尚無資料遷移／Worker 部署成功證明。
+## 部署與限制紀錄
+
+- 先前 D1 複合 SELECT 限制已修正為各表獨立 SELECT。之後正式 migration 成功。
+- 初次 Worker 最終部署在 Cloudflare services API 遭遇 504，使用者沿用原備份中的主金鑰檔，只重試 deploy 後成功；不要重新產生或覆寫主金鑰。
+- 私人 .backups 資料夾包含 SQL 備份及加密主金鑰，請妥善保管，不上傳 GitHub 或聊天。
+- 每分鐘是排程目標；Cloudflare／Fugle 配額不足時輪替，不能保證無限使用者同時每分鐘查完。H1 訊號只使用已收盤 K 線。
+- 內建 2026 官方休市日；未知年度安全停抓，臨時休市需維護者設定。
+- 自動化測試與成功建置不能取代 Google 登入、真實 Fugle Key 和 FCM 實機送達驗收。
