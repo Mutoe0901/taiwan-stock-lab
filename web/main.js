@@ -273,10 +273,15 @@
     $("stock").innerHTML = "";
     $("data-date").textContent = "";
     $("price-chart").innerHTML = "";
-    $("watchlist").innerHTML = "";
+    renderWatch();
   }
-  function setBundle(raw, { persist = true } = {}) {
-    const next = prepareBundle(raw);
+  function setBundle(raw, { persist = true, append = false } = {}) {
+    let next = prepareBundle(raw);
+    if (append && bundle?.mode === "real" && next.mode === "real") {
+      const incoming = new Set(next.stocks.map(s => s.id));
+      next = prepareBundle({ ...next, stocks: [...next.stocks, ...bundle.stocks.filter(s => !incoming.has(s.id))],
+        warnings: [...new Set([...(bundle.warnings || []), ...(next.warnings || [])])] });
+    }
     bundle = next;
     clearLoadState();
     stockId = bundle.stocks[0]?.id || null;
@@ -309,11 +314,14 @@
   function renderWatch() {
     $("watch-toggle").textContent = watch.includes(stockId) ? "\u79FB\u9664\u81EA\u9078" : "\u52A0\u5165\u81EA\u9078";
     $("watch-toggle").setAttribute("aria-pressed", String(watch.includes(stockId)));
-    const ws = bundle.stocks.filter((x) => watch.includes(x.id));
-    $("watchlist").innerHTML = ws.length ? ws.map((x) => {
-      let b = x.bars.at(-1), p = x.bars.at(-2), v = p ? b.close / p.close - 1 : null;
+    $("watch-toggle").disabled = !selected();
+    const stocks = new Map((bundle?.stocks || []).map(s => [s.id, s]));
+    $("watchlist").innerHTML = watch.length ? watch.map(id => {
+      const x = stocks.get(id);
+      if (!x) return `<button class="watch-item" data-stock="${esc(id)}"><span>${esc(id)}</span><span class="watch-price">尚未載入<small>點選重新查詢</small></span></button>`;
+      const b = x.bars.at(-1), p = x.bars.at(-2), v = p ? b.close / p.close - 1 : null;
       return `<button class="watch-item" data-stock="${esc(x.id)}"><span>${esc(x.name || x.id)}<small>${esc(x.id)}</small></span><span class="watch-price">${fmt(b.close)}<small class="${sign(v)}">${pct(v)}</small></span></button>`;
-    }).join("") : '<p class="empty">\u76EE\u524D\u6C92\u6709\u5DF2\u8F09\u5165\u7684\u81EA\u9078\u80A1\u7968\u3002</p>';
+    }).join("") : '<p class="empty">選擇標的後按「加入自選」，建立你的觀察清單。</p>';
   }
   function render() {
     if (!selected()) {
@@ -329,11 +337,6 @@
     $("chart-title").textContent = s.name || s.id;
     $("price-chart").innerHTML = candleChart(s.bars, inds);
     renderIndicator(inds);
-    const ws = bundle.stocks.filter((x) => watch.includes(x.id));
-    $("watchlist").innerHTML = ws.length ? ws.map((x) => {
-      let b2 = x.bars.at(-1), p = x.bars.at(-2), v = p ? b2.close / p.close - 1 : null;
-      return `<button class="watch-item" data-stock="${esc(x.id)}"><span>${esc(x.name || x.id)}<small>${esc(x.id)}</small></span><span class="watch-price">${fmt(b2.close)}<small class="${sign(v)}">${pct(v)}</small></span></button>`;
-    }).join("") : '<p class="empty">\u9078\u64C7\u6A19\u7684\u5F8C\u6309\u300C\u52A0\u5165\u81EA\u9078\u300D\uFF0C\u5EFA\u7ACB\u4F60\u7684\u89C0\u5BDF\u6E05\u55AE\u3002</p>';
     $("chip-list").innerHTML = [["\u5916\u8CC7", "foreign"], ["\u6295\u4FE1", "trust"], ["\u81EA\u71DF\u5546", "dealer"]].map(([n, k]) => `<div class="chip-row"><span>${n}</span><b class="${sign(b[k])}">${fmt(isNum(b[k]) ? b[k] / 1e3 : null, 0)}</b></div>`).join("");
     renderPortfolio();
     renderReport();
@@ -566,6 +569,12 @@
       $("watchlist").onclick = (e) => {
         const b = e.target.closest("[data-stock]");
         if (b) {
+          if (!bundle.stocks.some(s => s.id === b.dataset.stock)) {
+            $("fetch-ids").value = b.dataset.stock;
+            $("data-dialog").showModal();
+            $("fetch-ids").focus();
+            return;
+          }
           stockId = b.dataset.stock;
           dcfResult = null;
           $("dcf-result").innerHTML = "";
@@ -709,7 +718,7 @@
             d = await r.json();
             if (!r.ok) throw Error(d.error || "\u8CC7\u6599\u6293\u53D6\u5931\u6557");
           }
-          setBundle(d);
+          setBundle(d, { append: true });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           showLoadState(requested, true, message);
