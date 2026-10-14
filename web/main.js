@@ -267,6 +267,7 @@
     document.body.classList.remove("real-load-state");
   }
   function emptyState() {
+    window.dispatchEvent(new Event("stocklab-data-changed"));
     showLoadState("", true, "\u8ACB\u6309\u300C\u91CD\u65B0\u67E5\u8A62\u300D\u6216\u532F\u5165 JSON \u8F09\u5165\u771F\u5BE6\u8CC7\u6599\uFF1B\u4E0D\u6703\u81EA\u52D5\u6539\u7528\u6A21\u64EC\u8CC7\u6599\u3002");
     $("load-state-title").textContent = "\u5C1A\u672A\u8F09\u5165\u80A1\u7968\u8CC7\u6599";
     $("return-existing").hidden = true;
@@ -342,6 +343,7 @@
     renderReport();
     if (results) renderResults();
     extension?.render();
+    window.dispatchEvent(new Event("stocklab-data-changed"));
   }
   function renderIndicator(inds = indicators(selected().bars)) {
     let w = inds.slice(-60), labels = w.map((x) => x.date.slice(5));
@@ -2526,6 +2528,7 @@ ${financialLines}
 
 \u91CD\u8981\uFF1A\u672C\u6A5F\u63D0\u4F9B\u7684\u662F\u6B77\u53F2\u8CC7\u6599\u6458\u8981\uFF0C\u4E0D\u4EE3\u8868\u5373\u6642\u884C\u60C5\u3002\u8ACB\u628A\u6700\u65B0\u5916\u90E8\u8CC7\u6599\u8207\u672C\u6A5F\u622A\u6B62\u65E5\u5206\u958B\u8AAA\u660E\u3002`;
     }
+    window.StocklabResearchContext = buildChatGPTPrompt;
     async function copyChatGPTPrompt() {
       const text = buildChatGPTPrompt();
       if (window.StocklabMobile?.copyText) {

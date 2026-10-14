@@ -71,9 +71,9 @@
     const bars=window.StocklabAB.cleanBars(payload.data);
     if(bars.length<65)throw Error((payload.market?.open===false?payload.market.reason+'，只讀取既有個人快取；':'')+'H1 資料不足 65 根');
     imported.set(s.id,bars);$('ab-timeframe').value='H1';
-    message('已取得個人 H1 行情 '+bars.length+' 根；最後資料：'+bars.at(-1).date+(payload.cached?'（快取）':''));showCurrent();
+    message('已取得個人 H1 行情 '+bars.length+' 根；最後資料：'+bars.at(-1).date+(payload.cached?'（快取）':''));showCurrent();window.dispatchEvent(new Event('stocklab-h1-changed'));
   }
-  async function importJson(file){const obj=JSON.parse(await file.text());const s=currentStock();if(!s)throw Error('請先選擇股票');const bars=window.StocklabH1.closedBars(window.StocklabAB.parseFugleHistorical(obj));if(obj.symbol&&obj.symbol!==s.id)throw Error('匯入股票 '+obj.symbol+' 與目前股票 '+s.id+' 不一致');imported.set(s.id,bars);$('ab-timeframe').value='H1';message('匯入 '+bars.length+' 根 H1 歷史 K 線：'+s.id+'。請確認最後一根已收盤。');showCurrent();}
+  async function importJson(file){const obj=JSON.parse(await file.text());const s=currentStock();if(!s)throw Error('請先選擇股票');const bars=window.StocklabH1.closedBars(window.StocklabAB.parseFugleHistorical(obj));if(obj.symbol&&obj.symbol!==s.id)throw Error('匯入股票 '+obj.symbol+' 與目前股票 '+s.id+' 不一致');imported.set(s.id,bars);$('ab-timeframe').value='H1';message('匯入 '+bars.length+' 根 H1 歷史 K 線：'+s.id+'。請確認最後一根已收盤。');showCurrent();window.dispatchEvent(new Event('stocklab-h1-changed'));}
   function render(){if(!$('ab-current'))return;if(!currentStock()){$('ab-current').textContent='請先讀取真實股票行情。';return;}
     const s=currentStock();$('ab-stock-label').textContent=s.id+' '+(s.name||'')+' | '+(active()==='D1'?'日 K':'H1');
     if(lastStock!==s.id){lastRuns=null;$('ab-results').textContent='請點選「執行回測」。';$('ab-trades').textContent='';}
@@ -94,7 +94,7 @@
     $('ab-import').onchange=e=>{if(e.target.files[0])importJson(e.target.files[0]).catch(error=>message(error.message,true));e.target.value='';};
     for(const id of ['ab-timeframe','ab-mode','ab-volume-ratio','ab-institution','ab-short'])$(id).addEventListener('change',render);
     window.addEventListener('stocklab-account-changed',()=>{imported.clear();lastRuns=null;lastStock=null;if(autoTimer)clearInterval(autoTimer);autoTimer=null;$('ab-autorefresh').checked=false;$('ab-results').textContent='請重新讀取個人 H1 行情並執行回測';$('ab-trades').textContent='';$('ab-export').disabled=true;render();});
-    window.StocklabABUI={render};
+    window.StocklabABUI={render,getOptions:options,fetchH1:fetchFugle,getH1Bars:()=>{const key=currentStock()?.id;if(!imported.has(key))return null;return window.StocklabH1.closedBars(imported.get(key));}};
     render();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize);

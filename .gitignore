@@ -11,3 +11,9 @@ dist/
 *.aab
 **/google-services.json
 *service-account*.json
+
+research-data/
+.pytest_cache/
+
+__pycache__/
+*.pyc

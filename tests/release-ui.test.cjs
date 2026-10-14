@@ -1,10 +1,10 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {readFileSync}=require('node:fs'),{JSDOM}=require('jsdom');
 const html=readFileSync('web/index.html','utf8');
-test('release menu order and footer match APK v0.7.2; invitation and plaintext query input removed',()=>{
+test('release menu order and footer match APK v0.7.3; invitation and plaintext query input removed',()=>{
  const doc=new JSDOM(html).window.document;
  assert.deepEqual([...doc.querySelectorAll('nav[aria-label="主要功能"] button')].map(e=>[e.dataset.page,e.textContent.trim().slice(0,2)]),[['scanner','01'],['overview','02'],['bigdata','03'],['strategy','04'],['ab','05'],['flows','06'],['report','07']]);
- assert.match(doc.querySelector('footer').textContent,/v0\.7\.2/);
+ assert.match(doc.querySelector('footer').textContent,/v0\.7\.3/);
  assert.equal(doc.querySelector('#alerts-invite-panel'),null);assert.equal(doc.querySelector('#ab-fugle-key'),null);
  for(const id of ['alerts-key','alerts-key-save','alerts-key-check','alerts-key-delete','alerts-register'])assert.ok(doc.getElementById(id),id);
  assert.equal(doc.querySelector('#alerts-key').type,'password');
