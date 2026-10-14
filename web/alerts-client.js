@@ -260,6 +260,6 @@ function init(){if(!$('alerts-connect'))return;
  });
  bind('alerts-connect',connect);bind('alerts-google',signGoogle);bind('alerts-email-login',signEmail);bind('alerts-verify',sendVerification);bind('alerts-link-password',linkPassword);bind('alerts-logout',signout);bind('alerts-save',save);bind('alerts-register',register);bind('alerts-health',health);bind('alerts-key-save',saveKey);bind('alerts-key-check',checkKey);bind('alerts-key-delete',deleteKey);
  if(!cfg.workerUrl||!cfg.firebase?.projectId)write('尚未設定 Worker/Firebase，推播目前未啟用。');else firebase().catch(e=>write(readableError(e),true));}
-window.StocklabAlerts={hasCloud:()=>!!currentUser?.emailVerified&&!!currentRole&&!!cfg.workerUrl,hasKey:()=>keyConfigured,getUid:()=>currentUser?.uid||null,getCandles:candles};
+window.StocklabAlerts={hasCloud:()=>!!currentUser?.emailVerified&&!!currentRole&&!!cfg.workerUrl,hasKey:()=>keyConfigured,getUid:()=>currentUser?.uid||null,getCandles:candles,getResearchToken:async()=>{await firebase();const u=currentUser;if(!u?.emailVerified)throw Error('請先登入並驗證帳號');const token=await u.getIdToken();if(currentUser?.uid!==u.uid)throw Error('帳號已切換');return token;}};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

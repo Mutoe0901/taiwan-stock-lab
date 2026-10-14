@@ -23,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify v0.7.2 source files
+      - name: Verify v0.7.3 source files
         shell: bash
         run: |
           node <<'NODE'
@@ -32,8 +32,8 @@ jobs:
           const html = fs.readFileSync('web/index.html', 'utf8');
           const js = fs.readFileSync('web/main.js', 'utf8');
           const required = [
-            [pkg.version === '0.7.2', `package.json version is ${pkg.version}, expected 0.7.2`],
-            [html.includes('v0.7.2'), 'web/index.html does not show v0.7.2'],
+            [pkg.version === '0.7.3', `package.json version is ${pkg.version}, expected 0.7.3`],
+            [html.includes('v0.7.3'), 'web/index.html does not show v0.7.3'],
             [html.includes('id="quick-chatgpt"'), 'web/index.html is missing the ChatGPT quick button'],
             [html.includes('ChatGPT 深度分析'), 'web/index.html is missing ChatGPT 深度分析 text'],
             [js.includes('ChatGPTLauncher'), 'web/main.js is missing ChatGPT launcher logic'],
@@ -48,7 +48,7 @@ jobs:
             for (const e of errors) console.error('- ' + e);
             process.exit(1);
           }
-          console.log('Verified: Taiwan Stock Lab v0.7.2');
+          console.log('Verified: Taiwan Stock Lab v0.7.3');
           console.log('Verified: web/ ChatGPT button and launcher source are present');
           NODE
 
@@ -62,7 +62,7 @@ jobs:
 
       - name: Validate A/B strategy update
         run: |
-          node scripts/verify-stocklab-072.mjs
+          node scripts/verify-stocklab-073.mjs
           npm run test:ab
           npm run build:worker
           npm run test:alerts
