@@ -22,6 +22,7 @@ function setup(t){
 }
 test('02 opens embedded report; chart handles absent H1 and switching stocks',async t=>{
  const a=setup(t);assert.ok(a.calls.some(x=>x.length===100));
+ assert.match(a.el('quick-chatgpt').parentElement.textContent,/本次 API Key/);
  a.el('quick-chatgpt').click();assert.equal(a.el('research-dialog').open,true);
  await new Promise(r=>setTimeout(r,0));assert.match(a.el('research-service-status').textContent,/尚未連接/);
  a.el('research-timeframe').value='H1';a.el('research-timeframe').dispatchEvent(new a.w.Event('change'));

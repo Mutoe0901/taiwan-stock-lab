@@ -12,7 +12,7 @@ test('relay uses fixed HTTPS destination, preserves user auth, never follows red
  const env={RESEARCH_SERVICE_URL:'https://research.example'};
  const response=await researchProxy(request('/analyses?url=https://evil.example','POST'),env,fetcher);
  assert.equal(response.status,200);assert.equal(call.url,'https://research.example/v1/analyses');
- assert.equal(call.init.headers.Authorization,'Bearer test');assert.equal(call.init.redirect,'error');
+ assert.equal(call.init.headers.Authorization,'Bearer test');assert.equal(call.init.redirect,'manual');
  assert.equal(response.headers.get('Cache-Control'),'no-store');
  assert.equal((await researchProxy(request('/analyses','POST',''),env,fetcher)).status,401);
  assert.equal((await researchProxy(request('/../secrets'),env,fetcher)).status,404);
@@ -46,4 +46,27 @@ test('daily report history keeps engine and rejects unknown engines',async()=>{
  const response=await researchProxy(request('/analyses?symbol=2330&engine=daily_stock_analysis'),env,async url=>{target=new URL(url);return Response.json({items:[]});});
  assert.equal(response.status,200);assert.equal(target.searchParams.get('engine'),'daily_stock_analysis');
  assert.equal((await researchProxy(request('/analyses?symbol=2330&engine=other'),env)).status,400);
+});
+
+test('proxy works without AbortSignal.timeout or RequestInit cache support',async()=>{
+ const timeout=AbortSignal.timeout;
+ try{
+  AbortSignal.timeout=undefined;
+  const response=await researchProxy(request('/status'),{RESEARCH_SERVICE_URL:'https://research.example'},async(url,init)=>{
+   assert.equal('cache' in init,false);
+   assert.equal(init.headers['Cache-Control'],'no-store');
+   assert.ok(init.signal instanceof AbortSignal);
+   return Response.json({configured:true});
+  });
+  assert.equal(response.status,200);
+ }finally{AbortSignal.timeout=timeout;}
+});
+
+test('redirects are refused without forwarding credentials or replaying requests',async()=>{
+ let calls=0;
+ const response=await researchProxy(request('/analyses','POST'),{RESEARCH_SERVICE_URL:'https://research.example'},async(url,init)=>{
+  calls++;assert.equal(init.redirect,'manual');
+  return new Response('{}',{status:302,headers:{Location:'https://other.example','Content-Type':'application/json'}});
+ });
+ assert.equal(response.status,502);assert.equal(calls,1);
 });

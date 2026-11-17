@@ -153,7 +153,7 @@ function init(){
  $('research-analyze-open').onclick=openAnalysis;
  // Capture the existing 02 shortcut; the separate ChatGPT share/copy buttons remain available.
  $('quick-chatgpt')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openAnalysis();},true);
- if($('quick-chatgpt'))$('quick-chatgpt').textContent='🧠 AI 個股深度分析';
+ if($('quick-chatgpt')){const button=$('quick-chatgpt');button.textContent='🧠 AI 個股深度分析';const note=button.parentElement.querySelector('span');if(note)note.textContent='站內 AI 研究需本次 API Key；費用依所選模型供應商計算。';}
  $('research-engine').onchange=()=>{clearAnalysis();$('research-deep-model').disabled=$('research-engine').value==='daily_stock_analysis';history();};
  $('research-start').onclick=()=>analyze(false).catch(e=>notice('research-analysis-status',e.message,true));
  $('research-force').onclick=()=>analyze(true).catch(e=>notice('research-analysis-status',e.message,true));

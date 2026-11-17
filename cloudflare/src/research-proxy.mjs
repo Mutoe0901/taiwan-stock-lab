@@ -28,10 +28,13 @@ export async function researchProxy(request,env,upstream=fetch){
   if(engine&&!['tradingagents','daily_stock_analysis'].includes(engine))return json(400,{detail:'不支援的報告引擎'});
   if(engine)target.searchParams.set('engine',engine);
  }
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),55000);
  try{
-  const response=await upstream(target.toString(),{method:request.method,redirect:'error',
-   headers:{'Content-Type':'application/json',...(authorization?{Authorization:authorization}:{})},
-   body,signal:AbortSignal.timeout(55000),cache:'no-store'});
+  const response=await upstream(target.toString(),{method:request.method,redirect:'manual',
+   headers:{'Content-Type':'application/json','Cache-Control':'no-store',...(authorization?{Authorization:authorization}:{})},
+   body,signal:controller.signal});
+  if(response.status>=300&&response.status<400)throw new Error('Redirect refused');
   // A sleeping sandbox may return an HTML 503 while waking. Never relay its
   // page or automatically replay a POST: that could create duplicate paid jobs.
   if(response.status===503){
@@ -42,5 +45,5 @@ export async function researchProxy(request,env,upstream=fetch){
   }
   if(!response.headers.get('content-type')?.includes('application/json'))throw Error();
   return new Response(await response.text(),{status:response.status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
- }catch{return json(502,{detail:'研究服務暫時無法連線；請稍後查詢已有任務，避免重複送出。'});}
+ }catch(error){console.error('research_upstream_failed',{type:error?.name||'Error',category:/cache/i.test(error?.message||'')?'cache_option':/timeout/i.test(error?.message||'')?'timeout':/invocation/i.test(error?.message||'')?'fetch_binding':'network_or_response'});return json(502,{detail:'研究服務暫時無法連線；請稍後查詢已有任務，避免重複送出。'});}finally{clearTimeout(timer);}
 }
