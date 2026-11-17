@@ -6,32 +6,39 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
+from .taiwan_calendar import sessions, REVISION as CALENDAR_REVISION
 
 REVISION = '67b630e67f6a18c9e9be918d9b4337c960db1e9a'
 
 
+class KronosInputError(ValueError):
+    """Only controlled user-facing messages; never include provider exceptions."""
+
+
 def prepare(req, now=None):
     import pandas as pd
-    import exchange_calendars as xcals
     now = now or datetime.now(ZoneInfo('Asia/Taipei'))
     rows = [b.model_dump() for b in req.stock.bars]
     if any(len(b['date']) != 10 for b in rows):
-        raise ValueError('Daily bars only')
+        raise KronosInputError('Kronos 目前只接受日 K，請切換至日 K 後再試。')
     # Exclude today's unfinished daily candle, including a 90-second publication margin.
     rows = [b for b in rows if datetime.fromisoformat(b['date']).replace(
         tzinfo=ZoneInfo('Asia/Taipei'), hour=13, minute=31, second=30) <= now]
     if len(rows) < 65:
-        raise ValueError('At least 65 closed daily candles required')
+        raise KronosInputError('Kronos 至少需要 65 根已收盤日 K，請先載入較長的行情期間。')
     rows = rows[-256:]
     last = pd.Timestamp(rows[-1]['date'])
-    calendar = xcals.get_calendar('XTAI', start=rows[0]['date'],
-                                 end=(last + pd.Timedelta(days=90)).strftime('%Y-%m-%d'))
-    valid = set(calendar.sessions.strftime('%Y-%m-%d'))
-    if any(b['date'] not in valid for b in rows):
-        raise ValueError('Input contains a non-trading day')
-    future = calendar.sessions_in_range(last + pd.Timedelta(days=1), last + pd.Timedelta(days=60))[:req.forecast_days]
+    try:
+        calendar = sessions(rows[0]['date'], last + pd.Timedelta(days=60))
+    except ValueError:
+        raise KronosInputError('台股交易日曆尚未涵蓋此日期範圍，請聯絡管理者更新。') from None
+    valid = set(calendar.strftime('%Y-%m-%d'))
+    invalid = [b['date'] for b in rows if b['date'] not in valid]
+    if invalid:
+        raise KronosInputError('行情含非交易日期：' + '、'.join(invalid[:3]) + '。請重新載入真實日 K 資料。')
+    future = calendar[calendar > last][:req.forecast_days]
     if len(future) != req.forecast_days:
-        raise ValueError('Calendar range unavailable')
+        raise KronosInputError('交易日曆不足以推估指定天數，請聯絡管理者更新。')
     frame = pd.DataFrame(rows)[['open', 'high', 'low', 'close', 'volume']]
     # FinMind volume is shares. Actual amount is unavailable: let upstream use its documented proxy.
     return rows, frame, pd.Series(pd.to_datetime([b['date'] for b in rows])), pd.Series(future.tz_localize(None))
@@ -67,7 +74,7 @@ def analyze(req, progress):
         '只使用已收盤日 K 的 OHLCV，沒有新聞、財報、籌碼或未來事件。',
         '成交金額未提供，由原模型以成交量乘 OHLC 均價估算；成交量沿用來源股數。',
         '未做除權息、拆併股的額外校正，來源若未還原價格可能造成偏差。',
-        '交易日期依 XTAI 行事曆，臨時休市可能尚未反映；以行情截止日為預測起點。',
+        '交易日期依 XTAI 歷史行事曆與 TWSE 2026–2027 年校正；臨時休市可能尚未反映，以行情截止日為預測起點。',
         '不改動 A/B 訊號、進出場條件或推播。']
     return dict(symbol=req.stock.id, name=req.stock.name, engine='Kronos-small CPU',
         analysis_date=str(now.date()), quote_date=rows[-1]['date'],
@@ -78,4 +85,5 @@ def analyze(req, progress):
         sources=[dict(id='S1', title=req.source, date=rows[-1]['date'], scope=f'{req.stock.id} 日 K；擷取時間 {req.fetched_at or "未提供"}'),
                  dict(id='S2', title='Kronos 官方原始碼與模型', date=str(now.date()),
                       scope='模型方法與版本', url='https://github.com/shiyu-coder/Kronos')],
-        missing=missing, upstream_revision=REVISION, model_revisions=pins)
+        missing=missing, upstream_revision=REVISION, model_revisions=pins,
+        calendar_revision=CALENDAR_REVISION)

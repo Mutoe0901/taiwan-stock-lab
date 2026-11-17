@@ -25,6 +25,9 @@ def main():
         message = {401: '模型金鑰無效，請檢查後重新分析。', 403: '模型權限不足。',
                    429: '模型額度或請求頻率達上限，請稍後重試。'}.get(status,
                    '分析服務失敗；請檢查模型名稱、金鑰權限與網路連線後重試。')
+        if req.engine == 'kronos':
+            from .kronos import KronosInputError
+            message = str(exc) if isinstance(exc, KronosInputError) else 'Kronos 主機模型推估失敗；不需要 API Key，請稍後重試或聯絡管理者。'
         emit({'type': 'error', 'message': message, 'kind': type(exc).__name__})
         sys.exit(1)
 

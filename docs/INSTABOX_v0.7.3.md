@@ -137,3 +137,13 @@ machines:write API key into the APK just to bypass the dashboard.
 Official references:
 - https://instabox.sh/docs/access/ports#reach-a-paused-machine
 - https://instabox.sh/docs/machines/auto-pause#what-wakes-a-machine
+
+## Kronos calendar correction (2026-11-17)
+
+Actual FinMind 6274 data through 2026-11-17 reproduced a failure: exchange-calendars 4.11.2
+incorrectly classifies 2026-01-02 as closed. The old strict validator rejected the entire input.
+`research_service/taiwan_calendar.py` now uses TWSE-published 2026/2027 sessions, including
+settlement-only closures, with older historical years retained from XTAI. Controlled Kronos
+input errors identify invalid dates / missing candles, and other Kronos errors no longer ask for API keys.
+This is a backend update: build25 does not need reinstalling. Existing failed reports stay failed;
+users must explicitly submit again. No paid model call or old user job is retried automatically.
