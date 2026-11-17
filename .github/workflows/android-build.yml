@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - feature/research-tools-v073
     paths:
       - "web/**"
       - "scripts/**"
