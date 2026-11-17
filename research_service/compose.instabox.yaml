@@ -5,6 +5,8 @@ services:
       - "0.0.0.0:8000:8000"
     volumes: !override
       - ${STOCKLAB_DATA_DIR:-/data/stocklab/research-data}:/data
+      - /data/stocklab/kronos/models:/opt/kronos-models:ro
+    mem_limit: 4g
     environment:
       TZ: Asia/Taipei
     healthcheck:

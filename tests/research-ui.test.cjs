@@ -81,3 +81,24 @@ test('Android research connects to configured HTTPS backend while web keeps same
   assert.equal(options.redirect,'error');
  }
 });
+test('Kronos submits no keys, hides paid settings, and renders forecast rows',async t=>{
+ const a=setup(t);let submitted;
+ a.w.confirm=()=>true;
+ a.w.fetch=async(url,init)=>{
+  if(init.method==='POST'){submitted=JSON.parse(init.body);return {ok:true,json:async()=>({id:'kronos-job'})};}
+  return {ok:true,json:async()=>url.includes('kronos-job')?{status:'completed',progress:100,stage:'完成',report:{symbol:'2330',engine:'Kronos',summary:'推估',forecast:[{date:'2026-11-18',close:110,change:.1}]}}:{items:[]}};
+ };
+ a.el('research-key').value='MUST_NOT_SEND';
+ a.el('research-engine').value='kronos';a.el('research-engine').dispatchEvent(new a.w.Event('change'));
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal(a.el('research-model-settings').hidden,true);
+ assert.equal(a.el('research-forecast-label').hidden,false);
+ a.el('research-forecast-days').value='10';a.el('research-key').value='MUST_NOT_SEND';
+ a.el('research-start').click();await new Promise(r=>setTimeout(r,0));
+ assert.equal(submitted.engine,'kronos');assert.equal(submitted.api_key,'');assert.equal(submitted.finmind_token,'');
+ assert.equal(submitted.forecast_days,10);assert.equal(submitted.quick_model,'Kronos-small');
+ assert.match(a.el('research-report').textContent,/2026-11-18/);assert.match(a.el('research-force').textContent,/不呼叫/);
+ a.el('research-engine').value='tradingagents';a.el('research-engine').dispatchEvent(new a.w.Event('change'));
+ assert.equal(a.el('research-model-settings').hidden,false);assert.equal(a.el('research-forecast-label').hidden,true);
+ await new Promise(r=>setTimeout(r,0));
+});

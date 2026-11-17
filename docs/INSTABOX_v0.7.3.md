@@ -101,3 +101,22 @@ bash scripts/instabox-kronos.sh
 - https://instabox.sh/docs/machines/auto-pause
 - https://instabox.sh/docs/ports
 - https://instabox.sh/docs/integrations/mcp
+
+## Kronos integrated forecast
+
+`02 各股深度分析` → `Kronos 日 K 走勢推估` supports 5 or 10 subsequent XTAI sessions.
+The offline CPU adapter uses pinned Kronos-small / Tokenizer-base weights, at most 256 closed daily candles,
+3 sampled paths averaged with seed 2026. It needs Firebase sign-in but no model API key.
+Reports use the same UID-isolated history, cache and 90-day retention; a maximum of one Kronos task runs globally.
+It does not alter A/B decisions or send forecasts as notifications. It is not a calibrated confidence interval.
+Corporate-action adjustment is inherited from the source; temporary exchange closures may not be in the calendar.
+
+Prepare pinned model files before starting the new container:
+
+```sh
+/data/stocklab/kronos/venv/bin/python scripts/download-kronos-models.py
+bash scripts/instabox-research.sh start
+```
+
+The compose overlay mounts model files read-only and caps the research container at 4 GiB.
+The isolated container venv runs the upstream pinned code; no Hub code is dynamically executed.

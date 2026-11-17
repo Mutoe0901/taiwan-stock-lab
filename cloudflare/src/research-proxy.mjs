@@ -25,7 +25,7 @@ export async function researchProxy(request,env,upstream=fetch){
   const symbol=url.searchParams.get('symbol');if(!/^[0-9A-Za-z]{4,8}$/.test(symbol||''))return json(400,{detail:'股票代號不正確'});
   target.searchParams.set('symbol',symbol);
   const engine=url.searchParams.get('engine');
-  if(engine&&!['tradingagents','daily_stock_analysis'].includes(engine))return json(400,{detail:'不支援的報告引擎'});
+  if(engine&&!['tradingagents','daily_stock_analysis','kronos'].includes(engine))return json(400,{detail:'不支援的報告引擎'});
   if(engine)target.searchParams.set('engine',engine);
  }
  const controller=new AbortController();

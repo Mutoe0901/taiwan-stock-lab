@@ -117,6 +117,8 @@ def status():
     return {'configured': True, 'version': '0.7.3', 'backtrader': True, 'tradingagents': True,
             'daily_stock_analysis': Path(os.environ.get('DSA_ROOT', '/opt/daily-stock-analysis'), 'src/analyzer.py').is_file()
                 and Path(os.environ.get('DSA_PYTHON', '/opt/dsa-venv/bin/python')).is_file(),
+            'kronos': all(Path('/opt/kronos-models', part, 'model.safetensors').is_file() for part in ('model', 'tokenizer'))
+                and Path('/opt/kronos-venv/bin/python').is_file(),
             'auth': 'firebase', 'model_key': 'per-request', 'max_minutes': 15}
 
 
@@ -152,6 +154,10 @@ async def execute(job, req):
         if req.engine == 'daily_stock_analysis':
             executable = os.environ.get('DSA_PYTHON', '/opt/dsa-venv/bin/python')
             env['DSA_ROOT'] = os.environ.get('DSA_ROOT', '/opt/daily-stock-analysis')
+        elif req.engine == 'kronos':
+            executable = '/opt/kronos-venv/bin/python'
+            env.update(KRONOS_ROOT='/opt/kronos', KRONOS_MODELS='/opt/kronos-models',
+                       HF_HUB_OFFLINE='1', OMP_NUM_THREADS='2', MKL_NUM_THREADS='2')
         process = await asyncio.create_subprocess_exec(executable, '-m', 'research_service.runner', cwd=str(ROOT),
             env=env, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL, limit=2000000)
         async with asyncio.timeout(900):
@@ -188,6 +194,14 @@ async def execute(job, req):
 async def analyses(req: AnalyzeRequest, uid=Depends(identity)):
     if req.engine == 'daily_stock_analysis' and not status()['daily_stock_analysis']:
         raise HTTPException(503, '每日 AI 決策報告尚未部署，請更新研究服務映像。')
+    if req.engine == 'kronos':
+        if not status()['kronos']:
+            raise HTTPException(503, 'Kronos 模型尚未就緒，請稍後再試。')
+        if any(len(bar.date) != 10 for bar in req.stock.bars):
+            raise HTTPException(422, 'Kronos 目前只接受日 K 資料。')
+        req.api_key = req.finmind_token = req.context = ''
+        req.provider = 'openai'
+        req.quick_model = req.deep_model = 'Kronos-small'
     if req.stock.id.startswith('DEMO'): raise HTTPException(422, 'AI 分析需使用真實個股資料')
     day = datetime.now(ZoneInfo('Asia/Taipei')).date()
     if req.stock.bars[-1].date[:10] > str(day): raise HTTPException(422, '行情日期在未來')
@@ -204,10 +218,12 @@ async def analyses(req: AnalyzeRequest, uid=Depends(identity)):
         for row in rows:
             if row['status'] in ('queued', 'running') or (not req.force and row['status'] == 'completed'):
                 return {**expose(row), 'cached': row['status'] == 'completed'}
-        if not req.api_key.strip(): raise HTTPException(422, '請輸入本次模型 API Key；只讀取既有報告不需要金鑰')
+        if req.engine != 'kronos' and not req.api_key.strip(): raise HTTPException(422, '請輸入本次模型 API Key；只讀取既有報告不需要金鑰')
         active = c.execute("SELECT uid FROM jobs WHERE status IN ('queued','running')").fetchall()
         if any(row['uid'] == uid for row in active): raise HTTPException(409, '你的另一份分析正在執行，請完成後再試')
         if len(active) >= 2: raise HTTPException(429, '分析服務忙碌，請稍後再試')
+        if req.engine == 'kronos' and c.execute("SELECT 1 FROM jobs WHERE engine='kronos' AND status IN ('queued','running')").fetchone():
+            raise HTTPException(429, '另一份 Kronos 預測正在執行，請稍後再試。')
         count = c.execute('SELECT count(*) FROM jobs WHERE uid=? AND created>=?', (uid, midnight)).fetchone()[0]
         if count >= 10: raise HTTPException(429, '每日最多 10 次新分析；仍可讀取既有報告')
         job = str(uuid.uuid4())
@@ -221,7 +237,7 @@ async def analyses(req: AnalyzeRequest, uid=Depends(identity)):
 
 
 @app.get('/v1/analyses')
-def history(symbol: str, engine: Literal['tradingagents', 'daily_stock_analysis'] = 'tradingagents', uid=Depends(identity)):
+def history(symbol: str, engine: Literal['tradingagents', 'daily_stock_analysis', 'kronos'] = 'tradingagents', uid=Depends(identity)):
     with db() as c:
         rows = c.execute('SELECT * FROM jobs WHERE uid=? AND symbol=? AND engine=? ORDER BY created DESC LIMIT 20', (uid, symbol, engine)).fetchall()
     return {'items': [expose(r) for r in rows]}

@@ -11,7 +11,9 @@ def emit(value):
 def main():
     req = AnalyzeRequest.model_validate_json(sys.stdin.read())
     try:
-        if req.engine == 'daily_stock_analysis':
+        if req.engine == 'kronos':
+            from .kronos import analyze
+        elif req.engine == 'daily_stock_analysis':
             from .daily import analyze
         else:
             from .agents import analyze
