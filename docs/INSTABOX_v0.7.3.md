@@ -120,3 +120,20 @@ bash scripts/instabox-research.sh start
 
 The compose overlay mounts model files read-only and caps the research container at 4 GiB.
 The isolated container venv runs the upstream pinned code; no Hub code is dynamically executed.
+
+## One-click idle wake (2026-11-17)
+
+`02 → AI 個股深度分析 → 喚醒研究主機` (also in the Backtrader dialog) makes a public
+GET `/v1/status` request to the already-published research port. InstaBox resumes an idle-auto-paused
+machine on access, without dashboard login or an InstaBox API key. Only status GETs are retried
+(up to 4 attempts / roughly 3 minutes, respecting Retry-After); no analysis POST is replayed.
+Closing the dialog, changing the account or changing the selected stock cancels the wait.
+This is an explicit on-demand operation, not a keepalive or scheduled wake.
+
+Manual pause/stop is different: the public URL cannot resume it. Platform cooldown is also enforced.
+Those cases show a recovery message instead of retrying indefinitely. Do not put a workspace-wide
+machines:write API key into the APK just to bypass the dashboard.
+
+Official references:
+- https://instabox.sh/docs/access/ports#reach-a-paused-machine
+- https://instabox.sh/docs/machines/auto-pause#what-wakes-a-machine

@@ -7,7 +7,7 @@ function setup(t,native=false){
  w.eval(readFileSync('web/alerts-config.js','utf8'));
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
  w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
- w.AbortSignal=AbortSignal;
+ w.AbortSignal=AbortSignal;w.AbortController=AbortController;
  const rows=Array.from({length:100},(_,i)=>({date:new Date(Date.UTC(2025,0,i+1)).toISOString().slice(0,10),open:100,close:100,high:101,low:99,volume:10000}));
  let s={id:'2330',name:'台積電',bars:rows};
  w.StocklabABBridge={getSelected:()=>s,getBundle:()=>({mode:'real'})};
@@ -101,4 +101,27 @@ test('Kronos submits no keys, hides paid settings, and renders forecast rows',as
  a.el('research-engine').value='tradingagents';a.el('research-engine').dispatchEvent(new a.w.Event('change'));
  assert.equal(a.el('research-model-settings').hidden,false);assert.equal(a.el('research-forecast-label').hidden,true);
  await new Promise(r=>setTimeout(r,0));
+});
+test('one-click wake retries only status GET, honors retry, and never submits an analysis',async t=>{
+ const a=setup(t);let calls=[];
+ const later=a.w.setTimeout.bind(a.w);a.w.setTimeout=(fn,ms,...args)=>later(fn,ms===1000?0:ms,...args);
+ a.w.fetch=async(url,init)=>{calls.push({url,init});return calls.length===1?{ok:false,status:503,headers:new Headers({'Retry-After':'1'}),json:async()=>({detail:'waking'})}:{ok:true,json:async()=>({configured:true,kronos:true})};};
+ a.el('research-wake').click();a.el('research-wake').click();
+ await new Promise(r=>setTimeout(r,30));
+ assert.equal(calls.length,2);assert.ok(calls.every(x=>x.url.endsWith('/status')&&x.init.method==='GET'&&!x.init.body));
+ assert.ok(calls.every(x=>!x.init.headers.Authorization));
+ assert.match(a.el('research-service-status').textContent,/主機已就緒/);
+ assert.equal(a.el('research-wake').disabled,false);
+});
+test('closing the dialog cancels wake retries and cooldown does not create a retry loop',async t=>{
+ const a=setup(t);let calls=0;
+ a.w.fetch=async()=>{calls++;return {ok:false,status:503,headers:new Headers({'Retry-After':'5'}),json:async()=>({detail:'waking'})};};
+ a.el('research-dialog').open=true;a.el('research-wake').click();
+ await new Promise(r=>setTimeout(r,0));a.el('research-dialog').close();
+ await new Promise(r=>setTimeout(r,10));
+ assert.equal(calls,1);assert.equal(a.el('research-wake').disabled,false);
+ a.w.fetch=async()=>{calls++;return {ok:false,status:409,headers:new Headers({'Retry-After':'900'}),json:async()=>({detail:'cooldown'})};};
+ a.el('research-wake').click();await new Promise(r=>setTimeout(r,0));
+ assert.equal(calls,2);assert.match(a.el('research-service-status').textContent,/900 秒/);
+ assert.equal(a.el('research-wake').disabled,false);
 });
