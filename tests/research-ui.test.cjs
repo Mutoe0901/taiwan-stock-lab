@@ -40,3 +40,31 @@ test('untrusted report output is escaped and keys/results are cleared on account
  assert.equal(a.el('research-export').disabled,true);
  assert.ok(!JSON.stringify(a.w.localStorage).includes('must-not-persist'));
 });
+test('02 submits a daily report with one model, then clears secrets on engine switch',async t=>{
+ const a=setup(t);let submitted;
+ a.w.confirm=()=>true;
+ a.w.fetch=async(url,init)=>{
+  if(init.method==='POST'){
+   submitted=JSON.parse(init.body);
+   return {ok:true,json:async()=>({id:'test-job'})};
+  }
+  return {ok:true,json:async()=>url.includes('test-job')?{status:'completed',progress:100,stage:'完成',report:{symbol:'2330',engine:'daily_stock_analysis',summary:'每日報告'}}:{items:[]}};
+ };
+ a.el('research-engine').value='daily_stock_analysis';
+ a.el('research-engine').dispatchEvent(new a.w.Event('change'));
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal(a.el('research-deep-model').disabled,true);
+ a.el('research-quick-model').value='test-model';
+ a.el('research-key').value='SECRET_TEST_KEY';
+ a.el('research-start').click();
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal(submitted.engine,'daily_stock_analysis');
+ assert.equal(submitted.deep_model,'test-model');
+ assert.equal(a.el('research-key').value,'');
+ assert.match(a.el('research-report').textContent,/每日報告/);
+ a.el('research-engine').value='tradingagents';
+ a.el('research-engine').dispatchEvent(new a.w.Event('change'));
+ assert.equal(a.el('research-report').textContent,'');
+ assert.equal(a.el('research-deep-model').disabled,false);
+ await new Promise(r=>setTimeout(r,0));
+});

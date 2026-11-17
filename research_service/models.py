@@ -73,6 +73,7 @@ class BacktestRequest(StrictModel):
 
 
 class AnalyzeRequest(StrictModel):
+    engine: Literal['tradingagents', 'daily_stock_analysis'] = 'tradingagents'
     stock: Stock
     # A bounded local summary, never a portfolio/credential dump.
     context: str = Field(default='', max_length=24000)

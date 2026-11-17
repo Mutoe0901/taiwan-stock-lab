@@ -9,6 +9,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Literal
 from zoneinfo import ZoneInfo
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -40,6 +41,8 @@ def initialize():
             status TEXT NOT NULL, stage TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0,
             created REAL NOT NULL, updated REAL NOT NULL, report TEXT, error TEXT)''')
         c.execute('CREATE INDEX IF NOT EXISTS jobs_owner ON jobs(uid, created)')
+        if 'engine' not in {r['name'] for r in c.execute('PRAGMA table_info(jobs)')}:
+            c.execute("ALTER TABLE jobs ADD COLUMN engine TEXT NOT NULL DEFAULT 'tradingagents'")
         c.execute('CREATE TABLE IF NOT EXISTS limits(uid TEXT, operation TEXT, next_at REAL, PRIMARY KEY(uid,operation))')
         c.execute("UPDATE jobs SET status='failed',error='服務重新啟動，請手動重新分析。',stage='分析中斷' WHERE status IN ('queued','running')")
 
@@ -108,6 +111,8 @@ def claim_limit(uid, operation, seconds):
 @app.get('/v1/status')
 def status():
     return {'configured': True, 'version': '0.7.3', 'backtrader': True, 'tradingagents': True,
+            'daily_stock_analysis': Path(os.environ.get('DSA_ROOT', '/opt/daily-stock-analysis'), 'src/analyzer.py').is_file()
+                and Path(os.environ.get('DSA_PYTHON', '/opt/dsa-venv/bin/python')).is_file(),
             'auth': 'firebase', 'model_key': 'per-request', 'max_minutes': 15}
 
 
@@ -121,7 +126,7 @@ async def backtest(req: BacktestRequest, uid=Depends(identity)):
 
 
 def expose(row):
-    return {k: row[k] for k in ('id', 'symbol', 'status', 'stage', 'progress', 'created', 'updated', 'error')}
+    return {k: row[k] for k in ('id', 'symbol', 'engine', 'status', 'stage', 'progress', 'created', 'updated', 'error')}
 
 
 def update_job(job, **values):
@@ -139,7 +144,11 @@ async def execute(job, req):
         env['PYTHONUNBUFFERED'] = '1'
         env['LANGCHAIN_TRACING_V2'] = 'false'
         env['LANGSMITH_TRACING'] = 'false'
-        process = await asyncio.create_subprocess_exec(sys.executable, '-m', 'research_service.runner', cwd=str(ROOT),
+        executable = sys.executable
+        if req.engine == 'daily_stock_analysis':
+            executable = os.environ.get('DSA_PYTHON', '/opt/dsa-venv/bin/python')
+            env['DSA_ROOT'] = os.environ.get('DSA_ROOT', '/opt/daily-stock-analysis')
+        process = await asyncio.create_subprocess_exec(executable, '-m', 'research_service.runner', cwd=str(ROOT),
             env=env, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL, limit=2000000)
         async with asyncio.timeout(900):
             process.stdin.write(req.model_dump_json().encode())
@@ -173,6 +182,8 @@ async def execute(job, req):
 
 @app.post('/v1/analyses')
 async def analyses(req: AnalyzeRequest, uid=Depends(identity)):
+    if req.engine == 'daily_stock_analysis' and not status()['daily_stock_analysis']:
+        raise HTTPException(503, '每日 AI 決策報告尚未部署，請更新研究服務映像。')
     if req.stock.id.startswith('DEMO'): raise HTTPException(422, 'AI 分析需使用真實個股資料')
     day = datetime.now(ZoneInfo('Asia/Taipei')).date()
     if req.stock.bars[-1].date[:10] > str(day): raise HTTPException(422, '行情日期在未來')
@@ -196,8 +207,8 @@ async def analyses(req: AnalyzeRequest, uid=Depends(identity)):
         count = c.execute('SELECT count(*) FROM jobs WHERE uid=? AND created>=?', (uid, midnight)).fetchone()[0]
         if count >= 10: raise HTTPException(429, '每日最多 10 次新分析；仍可讀取既有報告')
         job = str(uuid.uuid4())
-        c.execute('INSERT INTO jobs(id,uid,digest,symbol,status,stage,created,updated) VALUES (?,?,?,?,?,?,?,?)',
-                  (job, uid, digest, req.stock.id, 'queued', '等待分析', now, now))
+        c.execute('INSERT INTO jobs(id,uid,digest,symbol,status,stage,created,updated,engine) VALUES (?,?,?,?,?,?,?,?,?)',
+                  (job, uid, digest, req.stock.id, 'queued', '等待分析', now, now, req.engine))
         row = c.execute('SELECT * FROM jobs WHERE id=?', (job,)).fetchone()
     task = asyncio.create_task(execute(job, req))
     TASKS.add(task)
@@ -206,9 +217,9 @@ async def analyses(req: AnalyzeRequest, uid=Depends(identity)):
 
 
 @app.get('/v1/analyses')
-def history(symbol: str, uid=Depends(identity)):
+def history(symbol: str, engine: Literal['tradingagents', 'daily_stock_analysis'] = 'tradingagents', uid=Depends(identity)):
     with db() as c:
-        rows = c.execute('SELECT * FROM jobs WHERE uid=? AND symbol=? ORDER BY created DESC LIMIT 20', (uid, symbol)).fetchall()
+        rows = c.execute('SELECT * FROM jobs WHERE uid=? AND symbol=? AND engine=? ORDER BY created DESC LIMIT 20', (uid, symbol, engine)).fetchall()
     return {'items': [expose(r) for r in rows]}
 
 

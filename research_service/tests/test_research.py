@@ -1,6 +1,7 @@
 import asyncio
 import json
 import math
+import sys
 from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
@@ -96,3 +97,35 @@ def test_real_tradingagents_roles_with_fake_llm_no_network():
     assert '空頭論點' in [s['title'] for s in report['sections']]
     assert report['missing']==['沒有新聞']
     assert '[S1]' in report['summary']
+
+
+def test_daily_jobs_have_separate_cache_history_and_uid_boundary(tmp_path, monkeypatch):
+    monkeypatch.setattr(server, 'DB_PATH', tmp_path / 'research.sqlite3')
+    monkeypatch.setattr(server, 'verify_identity', lambda token: token)
+    (tmp_path / 'src').mkdir()
+    (tmp_path / 'src/analyzer.py').touch()
+    monkeypatch.setenv('DSA_ROOT', str(tmp_path))
+    monkeypatch.setenv('DSA_PYTHON', sys.executable)
+    async def noop(*args): pass
+    monkeypatch.setattr(server, 'execute', noop)
+    payload = {'stock': {'id': '2330', 'bars': bars()}, 'provider': 'openai',
+               'quick_model': 'test', 'deep_model': 'test', 'api_key': 'SECRET_TEST_KEY'}
+    a = {'Authorization': 'Bearer alice'}
+    with TestClient(server.app) as client:
+        assert client.get('/v1/status').json()['daily_stock_analysis']
+        trading = client.post('/v1/analyses', json=payload, headers=a).json()['id']
+        server.update_job(trading, status='completed', report='{}')
+        daily_payload = {**payload, 'engine': 'daily_stock_analysis'}
+        daily = client.post('/v1/analyses', json=daily_payload, headers=a).json()['id']
+        assert daily != trading
+        server.update_job(daily, status='completed', report='{}')
+        cached = client.post('/v1/analyses', json={**daily_payload, 'api_key': ''}, headers=a).json()
+        assert cached['id'] == daily and cached['cached']
+        assert client.get('/v1/analyses?symbol=2330', headers=a).json()['items'][0]['id'] == trading
+        listing = '/v1/analyses?symbol=2330&engine=daily_stock_analysis'
+        assert client.get(listing, headers=a).json()['items'][0]['id'] == daily
+        assert client.get(listing, headers={'Authorization': 'Bearer bob'}).json()['items'] == []
+        assert client.get('/v1/analyses/' + daily, headers={'Authorization': 'Bearer bob'}).status_code == 404
+        assert client.post('/v1/analyses', json={**payload, 'engine': 'invalid'}, headers=a).status_code == 422
+        with server.db() as c:
+            assert 'SECRET_TEST_KEY' not in str([dict(r) for r in c.execute('SELECT * FROM jobs')])

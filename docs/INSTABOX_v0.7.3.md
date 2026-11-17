@@ -1,8 +1,18 @@
 # InstaBox 部署：台股研究室 0.7.3
 
-這份部署啟用既有的 Backtrader 與 TradingAgents 後端；個股圖表仍由前端執行。
+這份部署啟用 Backtrader、TradingAgents 與 daily_stock_analysis 後端；個股圖表仍由前端執行。
 Kronos 目前是獨立實驗環境，尚未連到網站按鈕，不能將安裝成功當成完整整合完成。
-daily_stock_analysis 不在本次部署範圍。
+daily_stock_analysis 固定 commit `aa7228986f0ac8fc78e9147be81dddb277ef342d`，
+在映像內使用獨立 Python 環境，直接呼叫上游 GeminiAnalyzer，沿用台股研究室的行情與證據。
+沒有啟動上游的網站、通知、排程或券商系統，不會另外寄信或推播。
+「02 各股深度分析」可切換 TradingAgents 或每日 AI 決策報告。
+每日報告目前為按需執行，使用分析模型，不使用整合模型；沒有自動每日執行排程。
+兩種報告的同日快取、歷史清單分開，仍共用每人每日 10 次與每人同時 1 份分析的限制。
+模型金鑰仍由每次請求提供，不新增伺服器共用金鑰。
+報告顯示上游引擎、行情日期、來源與資料缺口；以 OpenCC 轉成台灣繁體用語。
+`.TW` 只用於識別台灣市場提示詞，不會把股票代號送去 Yahoo 判定上市櫃。
+本次未使用上游多市場抓價、外部搜尋金鑰或社群輿情服務。
+上游 MIT 授權保留在 `research_service/DailyStockAnalysis-LICENSE.txt`。
 
 ## 機器內部署
 
@@ -30,6 +40,7 @@ bash scripts/instabox-research.sh check
 ```
 
 check 必須通過版本、Firebase 身份驗證設定及未登入請求 401。
+也會確認 daily_stock_analysis 的原始碼與獨立 Python 執行檔已安裝。
 這項檢查不呼叫付費模型，也不代表回測、模型推論已通過端到端驗證。
 
 ## 公開 HTTPS 與 Worker
@@ -50,6 +61,15 @@ instabox port publish main 8000
 參考原本 `RESEARCH_v0.7.3.md` 的 Worker 發布流程。完成後驗證網站 `/api/research/status`，再由真正登入的使用者測試回測與 AI 分析。
 代理等待時間已調整為 55 秒，並將主機喚醒時的 503 換成中文提示；不自動重送付費分析。
 這個修改必須發布 Worker 才會生效。
+若網站部署於 Sites，網站自己的伺服器代理也須同步支援 `engine` 歷史查詢參數，
+以及相同的 HTTPS 根網址；不能只更新 Android 使用的 Worker。
+
+## 本次程式驗證
+
+本機已執行 64 項 Node 測試、6 項研究後端測試，以及 2 項 DSA 轉接測試。
+DSA 測試使用固定的上游 checkout，執行真正的提示詞與報告解析；只有模型傳輸用替身，沒有花費 API 額度。
+另外檢查報告類型切換、不同引擎快取、使用者隔離、秘密清除與繁中輸出。
+Docker 完整映像建置、真實模型 API 與 4.5 小時運作仍待 InstaBox 上驗證。
 
 ## Kronos 獨立環境
 

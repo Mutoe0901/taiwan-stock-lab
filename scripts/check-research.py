@@ -18,6 +18,8 @@ def check(base):
     if not (status.get('configured') and status.get('version') == '0.7.3'
             and status.get('auth') == 'firebase'):
         raise ValueError('後端版本或登入設定不符合 0.7.3')
+    if not status.get('daily_stock_analysis'):
+        raise ValueError('daily_stock_analysis 尚未部署，請重建研究服務映像')
     # Empty body suffices: authentication must reject it before processing a job.
     request = urllib.request.Request(base + '/v1/analyses', data=b'{}',
                                      headers={'Content-Type': 'application/json'})
@@ -28,6 +30,7 @@ def check(base):
         if error.code != 401:
             raise ValueError(f'未登入請求預期 401，實際 {error.code}') from None
     print(json.dumps({'version': status['version'], 'health': 'ok',
+                      'daily_stock_analysis': True,
                       'unauthenticated': 401, 'live_model_tested': False,
                       'kronos_api_tested': False}, ensure_ascii=False))
 

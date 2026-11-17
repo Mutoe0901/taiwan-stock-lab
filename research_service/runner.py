@@ -11,7 +11,10 @@ def emit(value):
 def main():
     req = AnalyzeRequest.model_validate_json(sys.stdin.read())
     try:
-        from .agents import analyze
+        if req.engine == 'daily_stock_analysis':
+            from .daily import analyze
+        else:
+            from .agents import analyze
         report = analyze(req, lambda stage, percent: emit({'type': 'progress', 'stage': stage, 'progress': percent}))
         emit({'type': 'result', 'report': report})
     except Exception as exc:

@@ -40,3 +40,10 @@ test('sandbox retry delay is bounded and invalid values use a safe default',asyn
   assert.equal(response.headers.get('Retry-After'),expected);
  }
 });
+test('daily report history keeps engine and rejects unknown engines',async()=>{
+ let target;
+ const env={RESEARCH_SERVICE_URL:'https://research.example'};
+ const response=await researchProxy(request('/analyses?symbol=2330&engine=daily_stock_analysis'),env,async url=>{target=new URL(url);return Response.json({items:[]});});
+ assert.equal(response.status,200);assert.equal(target.searchParams.get('engine'),'daily_stock_analysis');
+ assert.equal((await researchProxy(request('/analyses?symbol=2330&engine=other'),env)).status,400);
+});
