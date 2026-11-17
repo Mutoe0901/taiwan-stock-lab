@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2.id_token import verify_firebase_token
 from .models import AnalyzeRequest, BacktestRequest
@@ -56,6 +57,9 @@ async def lifespan(app):
 
 
 app = FastAPI(title='Taiwan Stock Lab Research', lifespan=lifespan, docs_url=None, redoc_url=None)
+app.add_middleware(CORSMiddleware, allow_origins=['https://localhost'],
+                   allow_credentials=False, allow_methods=['GET', 'POST'],
+                   allow_headers=['Authorization', 'Content-Type'])
 
 
 @app.middleware('http')

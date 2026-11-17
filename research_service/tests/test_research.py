@@ -129,3 +129,18 @@ def test_daily_jobs_have_separate_cache_history_and_uid_boundary(tmp_path, monke
         assert client.post('/v1/analyses', json={**payload, 'engine': 'invalid'}, headers=a).status_code == 422
         with server.db() as c:
             assert 'SECRET_TEST_KEY' not in str([dict(r) for r in c.execute('SELECT * FROM jobs')])
+
+
+def test_android_cors_is_narrow_and_does_not_bypass_firebase(tmp_path, monkeypatch):
+    monkeypatch.setattr(server, 'DB_PATH', tmp_path / 'research.sqlite3')
+    with TestClient(server.app) as client:
+        headers = {'Origin': 'https://localhost', 'Access-Control-Request-Method': 'POST',
+                   'Access-Control-Request-Headers': 'authorization,content-type'}
+        preflight = client.options('/v1/analyses', headers=headers)
+        assert preflight.status_code == 200
+        assert preflight.headers['access-control-allow-origin'] == 'https://localhost'
+        rejected = client.options('/v1/analyses', headers={**headers, 'Origin': 'https://untrusted.example'})
+        assert rejected.status_code == 400 and 'access-control-allow-origin' not in rejected.headers
+        unauthorized = client.post('/v1/analyses', json={}, headers={'Origin': 'https://localhost'})
+        assert unauthorized.status_code == 401
+        assert unauthorized.headers['access-control-allow-origin'] == 'https://localhost'

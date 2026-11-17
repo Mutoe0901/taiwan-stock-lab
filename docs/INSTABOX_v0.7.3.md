@@ -45,6 +45,11 @@ check 必須通過版本、Firebase 身份驗證設定及未登入請求 401。
 
 ## 公開 HTTPS 與 Worker
 
+Android APK 的研究功能透過 `web/alerts-config.js` 的 `researchServiceUrl` 直接連到 HTTPS `/v1`。
+後端只接受 Android WebView 的 `https://localhost` 跨來源要求，所有報告操作仍驗證 Firebase。
+這不取代原有 Worker 的個人 Fugle、盤中通知或推播功能。網頁版仍使用同源代理。
+更新既有 APK 時保留原本的 appId 與固定簽章；0.7.3 的 versionCode 使用 73000 加 GitHub run number。
+
 在有 InstaBox CLI 且已登入的電腦執行（機器名稱若不是 main，請替換）：
 
 ```bash

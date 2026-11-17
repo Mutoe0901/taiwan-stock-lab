@@ -4,6 +4,8 @@
 
 globalThis.STOCKLAB_ALERTS_CONFIG = {
   workerUrl: 'https://taiwan-stock-lab-alerts.mutoe0901.workers.dev',
+  // Public endpoint; every report still requires a Firebase ID token.
+  researchServiceUrl: 'https://8000-agq6oq7r4l3fpt3i5acafi2nri.instabox.tech',
 
   firebase: {
     apiKey: 'AIzaSyBm9q1x-sd6m8WGDqnGugYNz6M-Om8lL1o',

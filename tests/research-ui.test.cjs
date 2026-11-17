@@ -1,8 +1,10 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {readFileSync}=require('node:fs');const {JSDOM}=require('jsdom');
-function setup(t){
+function setup(t,native=false){
  const dom=new JSDOM(readFileSync('web/index.html','utf8'),{url:'https://site.example',runScripts:'outside-only',pretendToBeVisual:true});t.after(()=>dom.window.close());
  const w=dom.window,el=id=>w.document.getElementById(id);let uid='alice';
+ w.StocklabCapacitor={Capacitor:{isNativePlatform:()=>native}};
+ w.eval(readFileSync('web/alerts-config.js','utf8'));
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
  w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
  w.AbortSignal=AbortSignal;
@@ -68,4 +70,14 @@ test('02 submits a daily report with one model, then clears secrets on engine sw
  assert.equal(a.el('research-report').textContent,'');
  assert.equal(a.el('research-deep-model').disabled,false);
  await new Promise(r=>setTimeout(r,0));
+});
+test('Android research connects to configured HTTPS backend while web keeps same-origin proxy',async t=>{
+ for(const native of [false,true]){
+  const a=setup(t,native);let target,options;
+  a.w.fetch=async(url,init)=>{target=url;options=init;return {ok:true,json:async()=>({configured:false})};};
+  a.el('research-analyze-open').click();
+  await new Promise(r=>setTimeout(r,0));
+  assert.equal(target,native?a.w.STOCKLAB_ALERTS_CONFIG.researchServiceUrl+'/v1/status':'/api/research/status');
+  assert.equal(options.redirect,'error');
+ }
 });

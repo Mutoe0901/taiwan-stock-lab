@@ -15,11 +15,17 @@ const clean=bars=>bars.map(b=>Object.fromEntries(barFields.filter(k=>b[k]!==unde
 const copyStock=s=>({id:s.id,name:s.name||'',sector:s.sector||'',bars:clean(s.bars)});
 function timeOf(date){return date.length===10?date:Math.floor(Date.parse(date)/1000);}
 function notice(id,message,bad=false){const el=$(id);if(el){el.textContent=message;el.classList.toggle('research-error',bad);}}
-function endpoint(){const native=window.StocklabCapacitor?.Capacitor?.isNativePlatform?.();return native?String(window.STOCKLAB_ALERTS_CONFIG?.workerUrl||'').replace(/\/$/,'')+'/api/research':'/api/research';}
+function endpoint(){
+ const native=window.StocklabCapacitor?.Capacitor?.isNativePlatform?.();
+ if(!native)return '/api/research';
+ const configured=window.STOCKLAB_ALERTS_CONFIG?.researchServiceUrl;
+ if(configured){const url=new URL(configured);if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)throw Error('研究服務網址設定不正確');return url.href.replace(/\/$/,'')+'/v1';}
+ return String(window.STOCKLAB_ALERTS_CONFIG?.workerUrl||'').replace(/\/$/,'')+'/api/research';
+}
 async function api(path,{method='GET',data,publicCall=false}={}){
  const uid=owner();const token=publicCall?'':await window.StocklabAlerts?.getResearchToken?.();
  if(!publicCall&&(!uid||!token))throw Error('請先到「05 A/B策略」登入並驗證帳號。');
- const response=await fetch(endpoint()+path,{method,cache:'no-store',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(65000)});
+ const response=await fetch(endpoint()+path,{method,redirect:'error',cache:'no-store',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(65000)});
  let body;try{body=await response.json();}catch{throw Error('研究服務尚未更新或未連線，請先完成後端部署。');}
  if(!publicCall&&owner()!==uid)throw Error('帳號已切換，已停止顯示上一個帳號的結果。');
  if(!response.ok)throw Error(typeof body.detail==='string'?body.detail:'研究服務錯誤（'+response.status+'）');
