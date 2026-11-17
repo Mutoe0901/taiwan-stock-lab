@@ -1,0 +1,9 @@
+.git
+node_modules
+.venv
+research-data
+.env
+*.apk
+*.zip
+**/__pycache__
+**/.pytest_cache

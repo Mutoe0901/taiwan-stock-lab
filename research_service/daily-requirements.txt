@@ -1,0 +1,12 @@
+# Isolated environment for the pinned upstream analyzer (not its web/bot stack).
+litellm==1.98.1
+json-repair==0.64.9
+SQLAlchemy==2.1.9
+pandas==3.1.1
+python-dotenv==1.2.4
+tenacity==9.2.1
+PyYAML==6.0.3
+requests==2.34.2
+httpx[socks]==0.28.1
+pydantic==2.14.3
+opencc-python-reimplemented==0.1.7

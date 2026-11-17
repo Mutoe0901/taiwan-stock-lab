@@ -1,0 +1,16 @@
+services:
+  research:
+    build:
+      context: ..
+      dockerfile: research_service/Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      FIREBASE_PROJECT_ID: taiwan-stock-lab-b6294
+      RESEARCH_ALLOWED_UIDS: ${RESEARCH_ALLOWED_UIDS:-}
+    volumes:
+      - research-data:/data
+    restart: unless-stopped
+    mem_limit: 2g
+volumes:
+  research-data:

@@ -1,3 +1,4 @@
+import {researchProxy} from './research-proxy.mjs';
 import AB from './strategy.mjs';
 import {isScanTime,taipeiParts,normalize,replayEvents,eventId} from './monitor.mjs';
 import {verifyFirebase,accessFor} from './auth.mjs';
@@ -188,7 +189,9 @@ async function route(request,env){
   const corsHeaders=cors(request,env);
   if(request.method==='OPTIONS')return new Response(null,{status:originAllowed(request.headers.get('Origin'),env)?204:403,headers:corsHeaders});
   const url=new URL(request.url),path=url.pathname;
+  if(path==='/api/research/status'&&request.method==='GET'){const r=await researchProxy(request,env);const h=new Headers(r.headers);for(const [k,v]of Object.entries(corsHeaders))h.set(k,v);return new Response(r.body,{status:r.status,headers:h});}
   let user;try{user=await identify(request,env);}catch(e){return respond({error:e.status===403?e.message:e.status===401?'請先使用有效 Firebase 帳號登入':'雲端服務尚未完成升級或暫時無法使用'},e.status||503,corsHeaders);}
+  if(path.startsWith('/api/research/')){const r=await researchProxy(request,env);const h=new Headers(r.headers);for(const [k,v]of Object.entries(corsHeaders))h.set(k,v);return new Response(r.body,{status:r.status,headers:h});}
   try{
     if(path==='/api/settings'&&request.method==='GET')return respond({...await userSettings(env,user.uid),uid:user.uid,email:user.email,role:user.role,enabled:true,credentials:await credentialStatus(env,user.uid)},200,corsHeaders);
     if(path==='/api/settings'&&request.method==='POST'){

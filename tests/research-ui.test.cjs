@@ -1,0 +1,127 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const {readFileSync}=require('node:fs');const {JSDOM}=require('jsdom');
+function setup(t,native=false){
+ const dom=new JSDOM(readFileSync('web/index.html','utf8'),{url:'https://site.example',runScripts:'outside-only',pretendToBeVisual:true});t.after(()=>dom.window.close());
+ const w=dom.window,el=id=>w.document.getElementById(id);let uid='alice';
+ w.StocklabCapacitor={Capacitor:{isNativePlatform:()=>native}};
+ w.eval(readFileSync('web/alerts-config.js','utf8'));
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
+ w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
+ w.AbortSignal=AbortSignal;w.AbortController=AbortController;
+ const rows=Array.from({length:100},(_,i)=>({date:new Date(Date.UTC(2025,0,i+1)).toISOString().slice(0,10),open:100,close:100,high:101,low:99,volume:10000}));
+ let s={id:'2330',name:'台積電',bars:rows};
+ w.StocklabABBridge={getSelected:()=>s,getBundle:()=>({mode:'real'})};
+ w.StocklabAlerts={getUid:()=>uid,getResearchToken:async()=>'token'};
+ w.StocklabABUI={getOptions:()=>({}),getH1Bars:()=>null};
+ w.eval(readFileSync('web/ab-strategies.js','utf8'));
+ const calls=[];const series=()=>({setData(data){calls.push(data);},createPriceLine(p){return p;},removePriceLine(){}});
+ w.LightweightCharts={CandlestickSeries:'c',HistogramSeries:'v',LineSeries:'l',createSeriesMarkers:()=>({setMarkers(m){calls.push(m);}}),createChart:()=>({addSeries:series,priceScale:()=>({applyOptions(){}}),subscribeCrosshairMove(){},applyOptions(){},timeScale:()=>({fitContent(){}})})};
+ w.fetch=async()=>({ok:true,json:async()=>({configured:false})});
+ // Set readiness to avoid duplicate DOMContentLoaded initialization in jsdom.
+ Object.defineProperty(w.document,'readyState',{value:'complete'});
+ w.eval(readFileSync('web/research.js','utf8'));
+ return {w,el,calls,account(next){uid=next;w.dispatchEvent(new w.Event('stocklab-account-changed'));},select(next){s=next;w.dispatchEvent(new w.Event('stocklab-data-changed'));}};
+}
+test('02 opens embedded report; chart handles absent H1 and switching stocks',async t=>{
+ const a=setup(t);assert.ok(a.calls.some(x=>x.length===100));
+ assert.match(a.el('quick-chatgpt').parentElement.textContent,/本次 API Key/);
+ a.el('quick-chatgpt').click();assert.equal(a.el('research-dialog').open,true);
+ await new Promise(r=>setTimeout(r,0));assert.match(a.el('research-service-status').textContent,/尚未連接/);
+ a.el('research-timeframe').value='H1';a.el('research-timeframe').dispatchEvent(new a.w.Event('change'));
+ assert.match(a.el('research-chart-status').textContent,/尚未取得 H1/);
+ a.select(undefined);assert.match(a.el('research-chart-status').textContent,/請先載入/);
+ assert.equal(a.el('research-dialog').open,false);
+});
+test('untrusted report output is escaped and keys/results are cleared on account switch',t=>{
+ const a=setup(t);
+ const html=a.w.StocklabResearch.reportHtml({symbol:'2330',summary:'<img src=x onerror=alert(1)>',sections:[{title:'<script>',text:'<script>alert(1)</script>'}],sources:[{id:'S1',title:'bad',url:'javascript:alert(1)'}]});
+ a.el('research-report').innerHTML=html;
+ assert.equal(a.el('research-report').querySelector('img,script'),null);
+ assert.equal(a.el('research-report').querySelector('a'),null);
+ a.el('research-key').value='must-not-persist';a.account('bob');
+ assert.equal(a.el('research-key').value,'');assert.equal(a.el('research-report').textContent,'');
+ assert.equal(a.el('research-export').disabled,true);
+ assert.ok(!JSON.stringify(a.w.localStorage).includes('must-not-persist'));
+});
+test('02 submits a daily report with one model, then clears secrets on engine switch',async t=>{
+ const a=setup(t);let submitted;
+ a.w.confirm=()=>true;
+ a.w.fetch=async(url,init)=>{
+  if(init.method==='POST'){
+   submitted=JSON.parse(init.body);
+   return {ok:true,json:async()=>({id:'test-job'})};
+  }
+  return {ok:true,json:async()=>url.includes('test-job')?{status:'completed',progress:100,stage:'完成',report:{symbol:'2330',engine:'daily_stock_analysis',summary:'每日報告'}}:{items:[]}};
+ };
+ a.el('research-engine').value='daily_stock_analysis';
+ a.el('research-engine').dispatchEvent(new a.w.Event('change'));
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal(a.el('research-deep-model').disabled,true);
+ a.el('research-quick-model').value='test-model';
+ a.el('research-key').value='SECRET_TEST_KEY';
+ a.el('research-start').click();
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal(submitted.engine,'daily_stock_analysis');
+ assert.equal(submitted.deep_model,'test-model');
+ assert.equal(a.el('research-key').value,'');
+ assert.match(a.el('research-report').textContent,/每日報告/);
+ a.el('research-engine').value='tradingagents';
+ a.el('research-engine').dispatchEvent(new a.w.Event('change'));
+ assert.equal(a.el('research-report').textContent,'');
+ assert.equal(a.el('research-deep-model').disabled,false);
+ await new Promise(r=>setTimeout(r,0));
+});
+test('Android research connects to configured HTTPS backend while web keeps same-origin proxy',async t=>{
+ for(const native of [false,true]){
+  const a=setup(t,native);let target,options;
+  a.w.fetch=async(url,init)=>{target=url;options=init;return {ok:true,json:async()=>({configured:false})};};
+  a.el('research-analyze-open').click();
+  await new Promise(r=>setTimeout(r,0));
+  assert.equal(target,native?a.w.STOCKLAB_ALERTS_CONFIG.researchServiceUrl+'/v1/status':'/api/research/status');
+  assert.equal(options.redirect,'error');
+ }
+});
+test('Kronos submits no keys, hides paid settings, and renders forecast rows',async t=>{
+ const a=setup(t);let submitted;
+ a.w.confirm=()=>true;
+ a.w.fetch=async(url,init)=>{
+  if(init.method==='POST'){submitted=JSON.parse(init.body);return {ok:true,json:async()=>({id:'kronos-job'})};}
+  return {ok:true,json:async()=>url.includes('kronos-job')?{status:'completed',progress:100,stage:'完成',report:{symbol:'2330',engine:'Kronos',summary:'推估',forecast:[{date:'2026-11-18',close:110,change:.1}]}}:{items:[]}};
+ };
+ a.el('research-key').value='MUST_NOT_SEND';
+ a.el('research-engine').value='kronos';a.el('research-engine').dispatchEvent(new a.w.Event('change'));
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal(a.el('research-model-settings').hidden,true);
+ assert.equal(a.el('research-forecast-label').hidden,false);
+ a.el('research-forecast-days').value='10';a.el('research-key').value='MUST_NOT_SEND';
+ a.el('research-start').click();await new Promise(r=>setTimeout(r,0));
+ assert.equal(submitted.engine,'kronos');assert.equal(submitted.api_key,'');assert.equal(submitted.finmind_token,'');
+ assert.equal(submitted.forecast_days,10);assert.equal(submitted.quick_model,'Kronos-small');
+ assert.match(a.el('research-report').textContent,/2026-11-18/);assert.match(a.el('research-force').textContent,/不呼叫/);
+ a.el('research-engine').value='tradingagents';a.el('research-engine').dispatchEvent(new a.w.Event('change'));
+ assert.equal(a.el('research-model-settings').hidden,false);assert.equal(a.el('research-forecast-label').hidden,true);
+ await new Promise(r=>setTimeout(r,0));
+});
+test('one-click wake retries only status GET, honors retry, and never submits an analysis',async t=>{
+ const a=setup(t);let calls=[];
+ const later=a.w.setTimeout.bind(a.w);a.w.setTimeout=(fn,ms,...args)=>later(fn,ms===1000?0:ms,...args);
+ a.w.fetch=async(url,init)=>{calls.push({url,init});return calls.length===1?{ok:false,status:503,headers:new Headers({'Retry-After':'1'}),json:async()=>({detail:'waking'})}:{ok:true,json:async()=>({configured:true,kronos:true})};};
+ a.el('research-wake').click();a.el('research-wake').click();
+ await new Promise(r=>setTimeout(r,30));
+ assert.equal(calls.length,2);assert.ok(calls.every(x=>x.url.endsWith('/status')&&x.init.method==='GET'&&!x.init.body));
+ assert.ok(calls.every(x=>!x.init.headers.Authorization));
+ assert.match(a.el('research-service-status').textContent,/主機已就緒/);
+ assert.equal(a.el('research-wake').disabled,false);
+});
+test('closing the dialog cancels wake retries and cooldown does not create a retry loop',async t=>{
+ const a=setup(t);let calls=0;
+ a.w.fetch=async()=>{calls++;return {ok:false,status:503,headers:new Headers({'Retry-After':'5'}),json:async()=>({detail:'waking'})};};
+ a.el('research-dialog').open=true;a.el('research-wake').click();
+ await new Promise(r=>setTimeout(r,0));a.el('research-dialog').close();
+ await new Promise(r=>setTimeout(r,10));
+ assert.equal(calls,1);assert.equal(a.el('research-wake').disabled,false);
+ a.w.fetch=async()=>{calls++;return {ok:false,status:409,headers:new Headers({'Retry-After':'900'}),json:async()=>({detail:'cooldown'})};};
+ a.el('research-wake').click();await new Promise(r=>setTimeout(r,0));
+ assert.equal(calls,2);assert.match(a.el('research-service-status').textContent,/900 秒/);
+ assert.equal(a.el('research-wake').disabled,false);
+});
