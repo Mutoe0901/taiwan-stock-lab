@@ -10,6 +10,8 @@
 
 ## 啟動 Python 服務
 
+InstaBox 的持久化、公開網址及休眠驗收流程，請看 [InstaBox 部署說明](docs/INSTABOX_v0.7.3.md)。Kronos 目前另行安裝，尚未接入前端。
+
 在有 Docker Compose 的 Linux/Windows 主機，於專案根目錄執行：
 
 ```sh

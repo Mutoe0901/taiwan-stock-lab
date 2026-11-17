@@ -28,7 +28,15 @@ export async function researchProxy(request,env,upstream=fetch){
  try{
   const response=await upstream(target.toString(),{method:request.method,redirect:'error',
    headers:{'Content-Type':'application/json',...(authorization?{Authorization:authorization}:{})},
-   body,signal:AbortSignal.timeout(suffix==='/backtest'?55000:25000),cache:'no-store'});
+   body,signal:AbortSignal.timeout(55000),cache:'no-store'});
+  // A sleeping sandbox may return an HTML 503 while waking. Never relay its
+  // page or automatically replay a POST: that could create duplicate paid jobs.
+  if(response.status===503){
+   const raw=response.headers.get('Retry-After');
+   const seconds=/^\d{1,5}$/.test(raw||'')?Math.min(3600,Math.max(1,Number(raw))):30;
+   return Response.json({detail:'研究主機正在喚醒或暫停中，請稍後再試；分析請先查詢歷史任務，避免重複送出。'},
+    {status:503,headers:{'Cache-Control':'no-store','Retry-After':String(seconds)}});
+  }
   if(!response.headers.get('content-type')?.includes('application/json'))throw Error();
   return new Response(await response.text(),{status:response.status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
  }catch{return json(502,{detail:'研究服務暫時無法連線；請稍後查詢已有任務，避免重複送出。'});}

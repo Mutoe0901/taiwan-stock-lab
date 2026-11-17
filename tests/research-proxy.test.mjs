@@ -24,3 +24,19 @@ test('relay bounds body and handles non-json failures without exposing upstream 
  const res=await researchProxy(request('/status'),{RESEARCH_SERVICE_URL:'https://research.example'},async()=>new Response('secret error page'));
  assert.equal(res.status,502);assert.ok(!(await res.text()).includes('secret error page'));
 });
+test('sandbox waking returns retry guidance without replaying a paid POST or leaking HTML',async()=>{
+ let calls=0;
+ const response=await researchProxy(request('/analyses','POST'),{RESEARCH_SERVICE_URL:'https://research.example'},async()=>{
+  calls++;return new Response('<html>private upstream diagnostics</html>',{status:503,headers:{'Retry-After':'15'}});
+ });
+ assert.equal(calls,1);
+ assert.equal(response.status,503);
+ assert.equal(response.headers.get('Retry-After'),'15');
+ assert.match((await response.json()).detail,/喚醒/);
+});
+test('sandbox retry delay is bounded and invalid values use a safe default',async()=>{
+ for(const [value,expected] of [['99999','3600'],['0','1'],['invalid','30']]){
+  const response=await researchProxy(request('/status'),{RESEARCH_SERVICE_URL:'https://research.example'},async()=>new Response('',{status:503,headers:{'Retry-After':value}}));
+  assert.equal(response.headers.get('Retry-After'),expected);
+ }
+});
