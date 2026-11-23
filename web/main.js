@@ -247,12 +247,16 @@
     return s;
   }
   function go(p) {
-    if (!["scanner", "bigdata", "overview", "strategy", "ab", "flows", "report"].includes(p) || !document.getElementById(p)) p = "overview";
-    page = p;
-    document.querySelectorAll(".page").forEach((e) => e.classList.toggle("active", e.id === p));
-    document.querySelectorAll("nav button").forEach((e) => e.classList.toggle("active", e.dataset.page === p));
-    $("page-title").textContent = { scanner: "\u6383\u63CF\u9078\u80A1", bigdata: "\u6B77\u53F2\u76F8\u4F3C\u689D\u4EF6\u5206\u6790", overview: "\u500B\u80A1\u7E3D\u89BD", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", ab: "A/B \u96D9\u7B56\u7565", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[p];
+    const target = document.getElementById(p);
+    const panel = target?.matches("#research > details");
+    if (!panel && !target?.matches(".page")) p = "overview";
+    page = panel ? "research" : p;
+    if (panel) target.open = true;
+    document.querySelectorAll(".page").forEach((e) => e.classList.toggle("active", e.id === page));
+    document.querySelectorAll("nav button").forEach((e) => e.classList.toggle("active", e.dataset.page === page));
+    $("page-title").textContent = { research: "研究工具", scanner: "\u6383\u63CF\u9078\u80A1", bigdata: "\u6B77\u53F2\u76F8\u4F3C\u689D\u4EF6\u5206\u6790", overview: "\u500B\u80A1\u7E3D\u89BD", strategy: "\u7B56\u7565\u56DE\u6E2C", flows: "\u8CC7\u91D1\u6D41\u5411", ab: "A/B \u96D9\u7B56\u7565", report: "\u8CA1\u5831\u8207\u4F30\u503C" }[page];
     history.replaceState(null, "", "#" + p);
+    if (panel) target.scrollIntoView({ block: "start" });
   }
   function showLoadState(id, failed = false, detail = "") {
     $("load-state").hidden = false;
