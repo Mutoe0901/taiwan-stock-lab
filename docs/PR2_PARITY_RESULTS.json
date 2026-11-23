@@ -1,0 +1,975 @@
+{
+  "baselineCommit": "90df9ed46d09d36c07898e90bff2f191c2ac65d4",
+  "baselineEngineSha256": "504cd5938ac0260c1b5d5ce25569728697d05df109f639bdcd75d19a6af8e5db",
+  "fixture": "Six bundled synthetic OHLCV series; H1 maps the same prices to weekday session hours. Not paid or live quote data.",
+  "scenarios": 96,
+  "signalComparisons": 150336,
+  "exitComparisons": 150336,
+  "scoreComparisons": 150336,
+  "closedTrades": 3062,
+  "longTrades": 2094,
+  "shortTrades": 968,
+  "mismatches": 0,
+  "cases": [
+    {
+      "label": "DEMO1/D1/default/A",
+      "bars": 783,
+      "closedTrades": 26,
+      "long": 26,
+      "short": 0,
+      "winRate": 0.3076923076923077,
+      "avgReturn": -0.015156990194768431,
+      "maxDrawdown": 0.3465456732814578
+    },
+    {
+      "label": "DEMO1/D1/default/B",
+      "bars": 783,
+      "closedTrades": 10,
+      "long": 10,
+      "short": 0,
+      "winRate": 0.5,
+      "avgReturn": -0.011828131599269676,
+      "maxDrawdown": 0.14270957228234693
+    },
+    {
+      "label": "DEMO1/D1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 33,
+      "long": 20,
+      "short": 13,
+      "winRate": 0.36363636363636365,
+      "avgReturn": -0.00916511176795299,
+      "maxDrawdown": 0.28845451002703426
+    },
+    {
+      "label": "DEMO1/D1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 23,
+      "long": 16,
+      "short": 7,
+      "winRate": 0.391304347826087,
+      "avgReturn": -0.010050172985781201,
+      "maxDrawdown": 0.23022202992963414
+    },
+    {
+      "label": "DEMO1/D1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 33,
+      "long": 20,
+      "short": 13,
+      "winRate": 0.24242424242424243,
+      "avgReturn": -0.017023328866761684,
+      "maxDrawdown": 0.44894889448482556
+    },
+    {
+      "label": "DEMO1/D1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 23,
+      "long": 16,
+      "short": 7,
+      "winRate": 0.21739130434782608,
+      "avgReturn": -0.01789609092821229,
+      "maxDrawdown": 0.35433422335504294
+    },
+    {
+      "label": "DEMO1/D1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 33,
+      "long": 20,
+      "short": 13,
+      "winRate": 0.09090909090909091,
+      "avgReturn": -0.03116965056942649,
+      "maxDrawdown": 0.6585131915166342
+    },
+    {
+      "label": "DEMO1/D1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 12,
+      "long": 11,
+      "short": 1,
+      "winRate": 0.08333333333333333,
+      "avgReturn": -0.03308460261606753,
+      "maxDrawdown": 0.3461046623882752
+    },
+    {
+      "label": "DEMO1/H1/default/A",
+      "bars": 783,
+      "closedTrades": 26,
+      "long": 26,
+      "short": 0,
+      "winRate": 0.3076923076923077,
+      "avgReturn": -0.015156990194768431,
+      "maxDrawdown": 0.3465456732814578
+    },
+    {
+      "label": "DEMO1/H1/default/B",
+      "bars": 783,
+      "closedTrades": 10,
+      "long": 10,
+      "short": 0,
+      "winRate": 0.5,
+      "avgReturn": -0.011828131599269676,
+      "maxDrawdown": 0.14270957228234693
+    },
+    {
+      "label": "DEMO1/H1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 33,
+      "long": 20,
+      "short": 13,
+      "winRate": 0.36363636363636365,
+      "avgReturn": -0.00916511176795299,
+      "maxDrawdown": 0.28845451002703426
+    },
+    {
+      "label": "DEMO1/H1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 23,
+      "long": 16,
+      "short": 7,
+      "winRate": 0.391304347826087,
+      "avgReturn": -0.010050172985781201,
+      "maxDrawdown": 0.23022202992963414
+    },
+    {
+      "label": "DEMO1/H1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 33,
+      "long": 20,
+      "short": 13,
+      "winRate": 0.24242424242424243,
+      "avgReturn": -0.017023328866761684,
+      "maxDrawdown": 0.44894889448482556
+    },
+    {
+      "label": "DEMO1/H1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 23,
+      "long": 16,
+      "short": 7,
+      "winRate": 0.21739130434782608,
+      "avgReturn": -0.01789609092821229,
+      "maxDrawdown": 0.35433422335504294
+    },
+    {
+      "label": "DEMO1/H1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 33,
+      "long": 20,
+      "short": 13,
+      "winRate": 0.09090909090909091,
+      "avgReturn": -0.03116965056942649,
+      "maxDrawdown": 0.6585131915166342
+    },
+    {
+      "label": "DEMO1/H1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 16,
+      "long": 10,
+      "short": 6,
+      "winRate": 0.0625,
+      "avgReturn": -0.03234577441538642,
+      "maxDrawdown": 0.42131418858013925
+    },
+    {
+      "label": "DEMO2/D1/default/A",
+      "bars": 783,
+      "closedTrades": 27,
+      "long": 27,
+      "short": 0,
+      "winRate": 0.3333333333333333,
+      "avgReturn": -0.007483228422165019,
+      "maxDrawdown": 0.2208936452670861
+    },
+    {
+      "label": "DEMO2/D1/default/B",
+      "bars": 783,
+      "closedTrades": 13,
+      "long": 13,
+      "short": 0,
+      "winRate": 0.46153846153846156,
+      "avgReturn": -0.006015718317132657,
+      "maxDrawdown": 0.11842888206384006
+    },
+    {
+      "label": "DEMO2/D1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 39,
+      "long": 20,
+      "short": 19,
+      "winRate": 0.41025641025641024,
+      "avgReturn": 0.002693211430171888,
+      "maxDrawdown": 0.09769138810744671
+    },
+    {
+      "label": "DEMO2/D1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 24,
+      "long": 15,
+      "short": 9,
+      "winRate": 0.4166666666666667,
+      "avgReturn": 0.0017193399922337353,
+      "maxDrawdown": 0.08804573718155373
+    },
+    {
+      "label": "DEMO2/D1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 39,
+      "long": 20,
+      "short": 19,
+      "winRate": 0.41025641025641024,
+      "avgReturn": -0.005147534410427106,
+      "maxDrawdown": 0.20419593657798163
+    },
+    {
+      "label": "DEMO2/D1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 24,
+      "long": 15,
+      "short": 9,
+      "winRate": 0.4166666666666667,
+      "avgReturn": -0.006151893642667027,
+      "maxDrawdown": 0.14572552125675853
+    },
+    {
+      "label": "DEMO2/D1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 39,
+      "long": 20,
+      "short": 19,
+      "winRate": 0.20512820512820512,
+      "avgReturn": -0.019289612281589655,
+      "maxDrawdown": 0.5389836605989559
+    },
+    {
+      "label": "DEMO2/D1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 12,
+      "long": 10,
+      "short": 2,
+      "winRate": 0.25,
+      "avgReturn": -0.020219946945672862,
+      "maxDrawdown": 0.22146407624626918
+    },
+    {
+      "label": "DEMO2/H1/default/A",
+      "bars": 783,
+      "closedTrades": 27,
+      "long": 27,
+      "short": 0,
+      "winRate": 0.3333333333333333,
+      "avgReturn": -0.007483228422165019,
+      "maxDrawdown": 0.2208936452670861
+    },
+    {
+      "label": "DEMO2/H1/default/B",
+      "bars": 783,
+      "closedTrades": 13,
+      "long": 13,
+      "short": 0,
+      "winRate": 0.46153846153846156,
+      "avgReturn": -0.006015718317132657,
+      "maxDrawdown": 0.11842888206384006
+    },
+    {
+      "label": "DEMO2/H1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 39,
+      "long": 20,
+      "short": 19,
+      "winRate": 0.41025641025641024,
+      "avgReturn": 0.002693211430171888,
+      "maxDrawdown": 0.09769138810744671
+    },
+    {
+      "label": "DEMO2/H1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 24,
+      "long": 15,
+      "short": 9,
+      "winRate": 0.4166666666666667,
+      "avgReturn": 0.0017193399922337353,
+      "maxDrawdown": 0.08804573718155373
+    },
+    {
+      "label": "DEMO2/H1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 39,
+      "long": 20,
+      "short": 19,
+      "winRate": 0.41025641025641024,
+      "avgReturn": -0.005147534410427106,
+      "maxDrawdown": 0.20419593657798163
+    },
+    {
+      "label": "DEMO2/H1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 24,
+      "long": 15,
+      "short": 9,
+      "winRate": 0.4166666666666667,
+      "avgReturn": -0.006151893642667027,
+      "maxDrawdown": 0.14572552125675853
+    },
+    {
+      "label": "DEMO2/H1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 39,
+      "long": 20,
+      "short": 19,
+      "winRate": 0.20512820512820512,
+      "avgReturn": -0.019289612281589655,
+      "maxDrawdown": 0.5389836605989559
+    },
+    {
+      "label": "DEMO2/H1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 14,
+      "long": 9,
+      "short": 5,
+      "winRate": 0.14285714285714285,
+      "avgReturn": -0.02465371165368941,
+      "maxDrawdown": 0.2977309629178815
+    },
+    {
+      "label": "DEMO3/D1/default/A",
+      "bars": 783,
+      "closedTrades": 37,
+      "long": 37,
+      "short": 0,
+      "winRate": 0.2972972972972973,
+      "avgReturn": -0.0113801408059134,
+      "maxDrawdown": 0.4873378619735087
+    },
+    {
+      "label": "DEMO3/D1/default/B",
+      "bars": 783,
+      "closedTrades": 17,
+      "long": 17,
+      "short": 0,
+      "winRate": 0.35294117647058826,
+      "avgReturn": -0.005892427992980849,
+      "maxDrawdown": 0.2937503668291439
+    },
+    {
+      "label": "DEMO3/D1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 54,
+      "long": 30,
+      "short": 24,
+      "winRate": 0.3148148148148148,
+      "avgReturn": -0.003834567854012347,
+      "maxDrawdown": 0.4219472860765535
+    },
+    {
+      "label": "DEMO3/D1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 32,
+      "long": 22,
+      "short": 10,
+      "winRate": 0.3125,
+      "avgReturn": -0.002660960350439799,
+      "maxDrawdown": 0.33877621783951284
+    },
+    {
+      "label": "DEMO3/D1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 54,
+      "long": 30,
+      "short": 24,
+      "winRate": 0.2962962962962963,
+      "avgReturn": -0.011695307290644993,
+      "maxDrawdown": 0.6052888023314436
+    },
+    {
+      "label": "DEMO3/D1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 32,
+      "long": 22,
+      "short": 10,
+      "winRate": 0.3125,
+      "avgReturn": -0.010506440896156852,
+      "maxDrawdown": 0.45608205154732606
+    },
+    {
+      "label": "DEMO3/D1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 54,
+      "long": 30,
+      "short": 24,
+      "winRate": 0.2037037037037037,
+      "avgReturn": -0.025861126326218013,
+      "maxDrawdown": 0.8074987872504995
+    },
+    {
+      "label": "DEMO3/D1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 23,
+      "long": 15,
+      "short": 8,
+      "winRate": 0.21739130434782608,
+      "avgReturn": -0.022627385533894626,
+      "maxDrawdown": 0.5234755986361845
+    },
+    {
+      "label": "DEMO3/H1/default/A",
+      "bars": 783,
+      "closedTrades": 37,
+      "long": 37,
+      "short": 0,
+      "winRate": 0.2972972972972973,
+      "avgReturn": -0.0113801408059134,
+      "maxDrawdown": 0.4873378619735087
+    },
+    {
+      "label": "DEMO3/H1/default/B",
+      "bars": 783,
+      "closedTrades": 17,
+      "long": 17,
+      "short": 0,
+      "winRate": 0.35294117647058826,
+      "avgReturn": -0.005892427992980849,
+      "maxDrawdown": 0.2937503668291439
+    },
+    {
+      "label": "DEMO3/H1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 54,
+      "long": 30,
+      "short": 24,
+      "winRate": 0.3148148148148148,
+      "avgReturn": -0.003834567854012347,
+      "maxDrawdown": 0.4219472860765535
+    },
+    {
+      "label": "DEMO3/H1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 32,
+      "long": 22,
+      "short": 10,
+      "winRate": 0.3125,
+      "avgReturn": -0.002660960350439799,
+      "maxDrawdown": 0.33877621783951284
+    },
+    {
+      "label": "DEMO3/H1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 54,
+      "long": 30,
+      "short": 24,
+      "winRate": 0.2962962962962963,
+      "avgReturn": -0.011695307290644993,
+      "maxDrawdown": 0.6052888023314436
+    },
+    {
+      "label": "DEMO3/H1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 32,
+      "long": 22,
+      "short": 10,
+      "winRate": 0.3125,
+      "avgReturn": -0.010506440896156852,
+      "maxDrawdown": 0.45608205154732606
+    },
+    {
+      "label": "DEMO3/H1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 54,
+      "long": 30,
+      "short": 24,
+      "winRate": 0.2037037037037037,
+      "avgReturn": -0.025861126326218013,
+      "maxDrawdown": 0.8074987872504995
+    },
+    {
+      "label": "DEMO3/H1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 19,
+      "long": 15,
+      "short": 4,
+      "winRate": 0.10526315789473684,
+      "avgReturn": -0.030544267884450107,
+      "maxDrawdown": 0.5040185330215039
+    },
+    {
+      "label": "DEMO4/D1/default/A",
+      "bars": 783,
+      "closedTrades": 30,
+      "long": 30,
+      "short": 0,
+      "winRate": 0.4,
+      "avgReturn": -0.002212990394208092,
+      "maxDrawdown": 0.13546467938651774
+    },
+    {
+      "label": "DEMO4/D1/default/B",
+      "bars": 783,
+      "closedTrades": 8,
+      "long": 8,
+      "short": 0,
+      "winRate": 0.75,
+      "avgReturn": 0.027416676360040457,
+      "maxDrawdown": 0.0500186374369721
+    },
+    {
+      "label": "DEMO4/D1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 41,
+      "long": 23,
+      "short": 18,
+      "winRate": 0.43902439024390244,
+      "avgReturn": 0.000697422641591485,
+      "maxDrawdown": 0.14977203254864135
+    },
+    {
+      "label": "DEMO4/D1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 25,
+      "long": 15,
+      "short": 10,
+      "winRate": 0.52,
+      "avgReturn": 0.005937543968524723,
+      "maxDrawdown": 0.08962073293146178
+    },
+    {
+      "label": "DEMO4/D1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 41,
+      "long": 23,
+      "short": 18,
+      "winRate": 0.3170731707317073,
+      "avgReturn": -0.00719871208094702,
+      "maxDrawdown": 0.29528342732611224
+    },
+    {
+      "label": "DEMO4/D1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 25,
+      "long": 15,
+      "short": 10,
+      "winRate": 0.4,
+      "avgReturn": -0.002021770199520083,
+      "maxDrawdown": 0.16656392167870637
+    },
+    {
+      "label": "DEMO4/D1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 41,
+      "long": 23,
+      "short": 18,
+      "winRate": 0.21951219512195122,
+      "avgReturn": -0.021425990999211497,
+      "maxDrawdown": 0.5972948869454462
+    },
+    {
+      "label": "DEMO4/D1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 16,
+      "long": 10,
+      "short": 6,
+      "winRate": 0.3125,
+      "avgReturn": -0.01460490441870995,
+      "maxDrawdown": 0.22013834079361172
+    },
+    {
+      "label": "DEMO4/H1/default/A",
+      "bars": 783,
+      "closedTrades": 30,
+      "long": 30,
+      "short": 0,
+      "winRate": 0.4,
+      "avgReturn": -0.002212990394208092,
+      "maxDrawdown": 0.13546467938651774
+    },
+    {
+      "label": "DEMO4/H1/default/B",
+      "bars": 783,
+      "closedTrades": 8,
+      "long": 8,
+      "short": 0,
+      "winRate": 0.75,
+      "avgReturn": 0.027416676360040457,
+      "maxDrawdown": 0.0500186374369721
+    },
+    {
+      "label": "DEMO4/H1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 41,
+      "long": 23,
+      "short": 18,
+      "winRate": 0.43902439024390244,
+      "avgReturn": 0.000697422641591485,
+      "maxDrawdown": 0.14977203254864135
+    },
+    {
+      "label": "DEMO4/H1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 25,
+      "long": 15,
+      "short": 10,
+      "winRate": 0.52,
+      "avgReturn": 0.005937543968524723,
+      "maxDrawdown": 0.08962073293146178
+    },
+    {
+      "label": "DEMO4/H1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 41,
+      "long": 23,
+      "short": 18,
+      "winRate": 0.3170731707317073,
+      "avgReturn": -0.00719871208094702,
+      "maxDrawdown": 0.29528342732611224
+    },
+    {
+      "label": "DEMO4/H1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 25,
+      "long": 15,
+      "short": 10,
+      "winRate": 0.4,
+      "avgReturn": -0.002021770199520083,
+      "maxDrawdown": 0.16656392167870637
+    },
+    {
+      "label": "DEMO4/H1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 41,
+      "long": 23,
+      "short": 18,
+      "winRate": 0.21951219512195122,
+      "avgReturn": -0.021425990999211497,
+      "maxDrawdown": 0.5972948869454462
+    },
+    {
+      "label": "DEMO4/H1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 14,
+      "long": 9,
+      "short": 5,
+      "winRate": 0.5,
+      "avgReturn": -0.003274094880270338,
+      "maxDrawdown": 0.13499747618948033
+    },
+    {
+      "label": "DEMO5/D1/default/A",
+      "bars": 783,
+      "closedTrades": 31,
+      "long": 31,
+      "short": 0,
+      "winRate": 0.3548387096774194,
+      "avgReturn": -0.005467958917881418,
+      "maxDrawdown": 0.2853822669295326
+    },
+    {
+      "label": "DEMO5/D1/default/B",
+      "bars": 783,
+      "closedTrades": 8,
+      "long": 8,
+      "short": 0,
+      "winRate": 0.25,
+      "avgReturn": -0.01899480498955991,
+      "maxDrawdown": 0.14483126417828374
+    },
+    {
+      "label": "DEMO5/D1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 42,
+      "long": 26,
+      "short": 16,
+      "winRate": 0.40476190476190477,
+      "avgReturn": -0.0018536070345130304,
+      "maxDrawdown": 0.208267816570897
+    },
+    {
+      "label": "DEMO5/D1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 24,
+      "long": 17,
+      "short": 7,
+      "winRate": 0.4166666666666667,
+      "avgReturn": -0.005629470872556122,
+      "maxDrawdown": 0.14596368835858153
+    },
+    {
+      "label": "DEMO5/D1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 42,
+      "long": 26,
+      "short": 16,
+      "winRate": 0.30952380952380953,
+      "avgReturn": -0.009755630405611056,
+      "maxDrawdown": 0.4152708314342598
+    },
+    {
+      "label": "DEMO5/D1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 24,
+      "long": 17,
+      "short": 7,
+      "winRate": 0.3333333333333333,
+      "avgReturn": -0.013432213457482906,
+      "maxDrawdown": 0.2839903167499084
+    },
+    {
+      "label": "DEMO5/D1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 42,
+      "long": 26,
+      "short": 16,
+      "winRate": 0.21428571428571427,
+      "avgReturn": -0.023975789016456826,
+      "maxDrawdown": 0.6718018950389393
+    },
+    {
+      "label": "DEMO5/D1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 17,
+      "long": 12,
+      "short": 5,
+      "winRate": 0.11764705882352941,
+      "avgReturn": -0.03655041755862847,
+      "maxDrawdown": 0.47194790099098205
+    },
+    {
+      "label": "DEMO5/H1/default/A",
+      "bars": 783,
+      "closedTrades": 31,
+      "long": 31,
+      "short": 0,
+      "winRate": 0.3548387096774194,
+      "avgReturn": -0.005467958917881418,
+      "maxDrawdown": 0.2853822669295326
+    },
+    {
+      "label": "DEMO5/H1/default/B",
+      "bars": 783,
+      "closedTrades": 8,
+      "long": 8,
+      "short": 0,
+      "winRate": 0.25,
+      "avgReturn": -0.01899480498955991,
+      "maxDrawdown": 0.14483126417828374
+    },
+    {
+      "label": "DEMO5/H1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 42,
+      "long": 26,
+      "short": 16,
+      "winRate": 0.40476190476190477,
+      "avgReturn": -0.0018536070345130304,
+      "maxDrawdown": 0.208267816570897
+    },
+    {
+      "label": "DEMO5/H1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 24,
+      "long": 17,
+      "short": 7,
+      "winRate": 0.4166666666666667,
+      "avgReturn": -0.005629470872556122,
+      "maxDrawdown": 0.14596368835858153
+    },
+    {
+      "label": "DEMO5/H1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 42,
+      "long": 26,
+      "short": 16,
+      "winRate": 0.30952380952380953,
+      "avgReturn": -0.009755630405611056,
+      "maxDrawdown": 0.4152708314342598
+    },
+    {
+      "label": "DEMO5/H1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 24,
+      "long": 17,
+      "short": 7,
+      "winRate": 0.3333333333333333,
+      "avgReturn": -0.013432213457482906,
+      "maxDrawdown": 0.2839903167499084
+    },
+    {
+      "label": "DEMO5/H1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 42,
+      "long": 26,
+      "short": 16,
+      "winRate": 0.21428571428571427,
+      "avgReturn": -0.023975789016456826,
+      "maxDrawdown": 0.6718018950389393
+    },
+    {
+      "label": "DEMO5/H1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 17,
+      "long": 13,
+      "short": 4,
+      "winRate": 0.11764705882352941,
+      "avgReturn": -0.032646549709632704,
+      "maxDrawdown": 0.4342038209538286
+    },
+    {
+      "label": "DEMO6/D1/default/A",
+      "bars": 783,
+      "closedTrades": 46,
+      "long": 46,
+      "short": 0,
+      "winRate": 0.2826086956521739,
+      "avgReturn": -0.009263364216755303,
+      "maxDrawdown": 0.3735433662082195
+    },
+    {
+      "label": "DEMO6/D1/default/B",
+      "bars": 783,
+      "closedTrades": 22,
+      "long": 22,
+      "short": 0,
+      "winRate": 0.36363636363636365,
+      "avgReturn": -0.0032701803570971614,
+      "maxDrawdown": 0.17007925590824324
+    },
+    {
+      "label": "DEMO6/D1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 60,
+      "long": 38,
+      "short": 22,
+      "winRate": 0.36666666666666664,
+      "avgReturn": -0.0021744779822486866,
+      "maxDrawdown": 0.2908690381919645
+    },
+    {
+      "label": "DEMO6/D1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 44,
+      "long": 29,
+      "short": 15,
+      "winRate": 0.38636363636363635,
+      "avgReturn": -0.00041669284469658674,
+      "maxDrawdown": 0.28760904059804615
+    },
+    {
+      "label": "DEMO6/D1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 60,
+      "long": 38,
+      "short": 22,
+      "winRate": 0.26666666666666666,
+      "avgReturn": -0.010040427064827244,
+      "maxDrawdown": 0.5088470301013337
+    },
+    {
+      "label": "DEMO6/D1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 44,
+      "long": 29,
+      "short": 15,
+      "winRate": 0.29545454545454547,
+      "avgReturn": -0.008289120423676894,
+      "maxDrawdown": 0.4336160099081151
+    },
+    {
+      "label": "DEMO6/D1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 60,
+      "long": 38,
+      "short": 22,
+      "winRate": 0.16666666666666666,
+      "avgReturn": -0.02419108626027376,
+      "maxDrawdown": 0.781116174826548
+    },
+    {
+      "label": "DEMO6/D1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 24,
+      "long": 14,
+      "short": 10,
+      "winRate": 0.16666666666666666,
+      "avgReturn": -0.02347886155528694,
+      "maxDrawdown": 0.4377551932224093
+    },
+    {
+      "label": "DEMO6/H1/default/A",
+      "bars": 783,
+      "closedTrades": 46,
+      "long": 46,
+      "short": 0,
+      "winRate": 0.2826086956521739,
+      "avgReturn": -0.009263364216755303,
+      "maxDrawdown": 0.3735433662082195
+    },
+    {
+      "label": "DEMO6/H1/default/B",
+      "bars": 783,
+      "closedTrades": 22,
+      "long": 22,
+      "short": 0,
+      "winRate": 0.36363636363636365,
+      "avgReturn": -0.0032701803570971614,
+      "maxDrawdown": 0.17007925590824324
+    },
+    {
+      "label": "DEMO6/H1/both-zero-cost/A",
+      "bars": 783,
+      "closedTrades": 60,
+      "long": 38,
+      "short": 22,
+      "winRate": 0.36666666666666664,
+      "avgReturn": -0.0021744779822486866,
+      "maxDrawdown": 0.2908690381919645
+    },
+    {
+      "label": "DEMO6/H1/both-zero-cost/B",
+      "bars": 783,
+      "closedTrades": 44,
+      "long": 29,
+      "short": 15,
+      "winRate": 0.38636363636363635,
+      "avgReturn": -0.00041669284469658674,
+      "maxDrawdown": 0.28760904059804615
+    },
+    {
+      "label": "DEMO6/H1/both-standard-cost/A",
+      "bars": 783,
+      "closedTrades": 60,
+      "long": 38,
+      "short": 22,
+      "winRate": 0.26666666666666666,
+      "avgReturn": -0.010040427064827244,
+      "maxDrawdown": 0.5088470301013337
+    },
+    {
+      "label": "DEMO6/H1/both-standard-cost/B",
+      "bars": 783,
+      "closedTrades": 44,
+      "long": 29,
+      "short": 15,
+      "winRate": 0.29545454545454547,
+      "avgReturn": -0.008289120423676894,
+      "maxDrawdown": 0.4336160099081151
+    },
+    {
+      "label": "DEMO6/H1/institution-high-cost/A",
+      "bars": 783,
+      "closedTrades": 60,
+      "long": 38,
+      "short": 22,
+      "winRate": 0.16666666666666666,
+      "avgReturn": -0.02419108626027376,
+      "maxDrawdown": 0.781116174826548
+    },
+    {
+      "label": "DEMO6/H1/institution-high-cost/B",
+      "bars": 783,
+      "closedTrades": 26,
+      "long": 18,
+      "short": 8,
+      "winRate": 0.15384615384615385,
+      "avgReturn": -0.02531969795235354,
+      "maxDrawdown": 0.5263744605129573
+    }
+  ]
+}

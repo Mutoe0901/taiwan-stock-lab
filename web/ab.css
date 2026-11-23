@@ -14,7 +14,11 @@
 
 nav[aria-label="主要功能"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .research-panel { margin-bottom: 12px; }
-.research-panel > summary { cursor: pointer; padding: 16px; border-radius: 8px; background: #e5f1ef; color: #174a44; font-weight: 700; }
+.research-panel > summary { cursor: pointer; min-height: 48px; padding: 16px; border-radius: 8px; background: #e5f1ef; color: #174a44; font-weight: 700; }
+.research-panel { scroll-margin-top: 16px; }
+.research-panel > summary:focus-visible, #ab-observed > summary:focus-visible, #ab-trades summary:focus-visible { outline: 3px solid #4ba99c; outline-offset: 3px; }
+#ab-observed, #ab-trades details { margin-top: 16px; }
+#ab-observed > summary, #ab-trades summary { cursor: pointer; min-height: 44px; padding: 12px 0; font-weight: 600; }
 .research-panel[open] > summary { margin-bottom: 12px; }
 @media print {
   #research { display: block !important; }
