@@ -10,4 +10,18 @@
 .ab-section th,.ab-section td{padding:10px;border-bottom:1px solid #dde6e8;text-align:right}
 .ab-section th:first-child,.ab-section td:first-child{text-align:left}
 .ab-error{color:#ad3042!important;background:#fff2f3!important;border:1px solid #efabb2!important}
-@media(max-width:640px){.ab-cards{grid-template-columns:1fr}.ab-section .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}nav{grid-template-columns:repeat(7,minmax(0,1fr))!important}nav button{font-size:9px!important;padding:4px 1px!important}nav button span{font-size:10px!important}body{padding-bottom:calc(90px + env(safe-area-inset-bottom))}}
+@media(max-width:640px){.ab-cards{grid-template-columns:1fr}.ab-section .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}body{padding-bottom:calc(90px + env(safe-area-inset-bottom))}}
+
+nav[aria-label="主要功能"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.research-panel { margin-bottom: 12px; }
+.research-panel > summary { cursor: pointer; min-height: 48px; padding: 16px; border-radius: 8px; background: #e5f1ef; color: #174a44; font-weight: 700; }
+.research-panel { scroll-margin-top: 16px; }
+.research-panel > summary:focus-visible, #ab-observed > summary:focus-visible, #ab-trades summary:focus-visible { outline: 3px solid #4ba99c; outline-offset: 3px; }
+#ab-observed, #ab-trades details { margin-top: 16px; }
+#ab-observed > summary, #ab-trades summary { cursor: pointer; min-height: 44px; padding: 12px 0; font-weight: 600; }
+.research-panel[open] > summary { margin-bottom: 12px; }
+@media print {
+  #research { display: block !important; }
+  #research > :not(#report), #report > summary { display: none !important; }
+  #report::details-content { content-visibility: visible; }
+}
